@@ -1,3 +1,4 @@
 src/stan_files/*.rds
 fits/
 plots/
+data/*.eps
