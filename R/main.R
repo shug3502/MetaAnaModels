@@ -1,4 +1,4 @@
-vargs = commandArgs(trailingOnly=TRUE)
+args = commandArgs(trailingOnly=TRUE)
 library(rstan) 
 library(dplyr) 
 library(purrr)
