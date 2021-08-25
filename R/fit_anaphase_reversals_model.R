@@ -54,7 +54,8 @@ fit_anaphase_reversals_model <- function(jobset_str, t_ana_df, K=Inf,
                              v_ana = rep(0.04,nTracks), t_ana = t_ana_df[["t_ana"]] + 3*dt*rnorm(nTracks)
     )
     #stan_file = here::here('src/stan_files/anaphase_reversals_hierarchical.stan')
-    estimate <- rstan::stan(file=stan_file,
+    m <- stan_model(stan_file) #slightly different way to call a stan model, this compiles the model and the next line does the sampling
+    estimate <- rstan::sampling(m,
                      data=stan_input,
                      seed = 42,
                      chains = 4,
@@ -70,7 +71,7 @@ fit_anaphase_reversals_model <- function(jobset_str, t_ana_df, K=Inf,
     #if not, will need to run again
     num_iter <- num_iter*2
     cat(paste("Run did not converge. Trying again with ", num_iter, "iterations instead."))
-        estimate <- rstan::stan(file=stan_file,
+    estimate <- rstan::sampling(m,
                      data=stan_input,
                      seed = 42,
                      chains = 4,

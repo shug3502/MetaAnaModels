@@ -15,6 +15,8 @@ rstan::rstan_options(auto_write = TRUE) #tries to avoid recompiling stan code
 options(mc.cores = parallel::detectCores()) #uses as many cores as you have
 source(here::here('R/helper_fns.R'))
 source(here::here('R/switching_analysis_helper_fns.R'))
+source(here::here('R/hawkes_process_analysis.R'))
+source(here::here('R/get_directional_switch_events.R'))
 source(here::here('R/extract_hidden_states.R'))
 ##############################
 #options etc
@@ -28,10 +30,12 @@ fits_folder_str <- "fits"
   job_id = stringr::str_split(jobset_str,"kittracking")[[1]][2]
   edited_job_id = paste(job_id %>%
                        stringr::str_replace_all("\\.",""),identifier,sep="")
-  path_to_est <- file.path(fits_folder_str,paste('anaphase_reversals_hierarchical_',edited_job_id,'.rds',sep=''))
+  #path_to_est <- file.path(fits_folder_str,paste('anaphase_reversals_hierarchical_',edited_job_id,'.rds',sep=''))
+  path_to_est <- here::here("../Constandia/estimate.rds")
   if (file.exists(path_to_est)){
     estimate <- readRDS(file=path_to_est)
-    sigma_sim <- extract_hidden_states(estimate)
+    #sigma_sim <- extract_hidden_states(estimate)
+    sigma_sim <- readRDS(here::here("../Constandia/sigma_sim.rds"))
     success = generate_figures_based_on_states_and_switching(estimate,sigma_sim,jobset_str,
 							     paste0(identifier,"cell",1),dt)
   } else {
@@ -40,5 +44,5 @@ fits_folder_str <- "fits"
   }
   if (success){cat("SUCCESS!\n")} else {cat("FAILED :(\n")}
 
-
+hawkes_fit <- hawkes_process_analysis(sigma_sim,jobset_str,dt)
 

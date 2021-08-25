@@ -21,11 +21,11 @@ source(here::here('R/extract_hidden_states.R'))
 ##############################
 #options etc
 dt=2.05
-identifier <- "JH_test_v000"
+identifier <- "JH_test_v111"
 run_analysis <- TRUE
 use_parallel <- FALSE
 run_changept_anyway <- FALSE
-num_iter <- 200
+num_iter <- 100
 #############################
 
 jobset_str <- here::here("data/OS_LLSM_200818_MC191_Untreated_2.04933s_per_frame//kittracking001-kitjobset_200825_DonaldDuck_auto_v125-OS_LLSM_200818_MC191_Untreated_capture10_flowdec_deconvolved.ome.csv")
@@ -49,6 +49,4 @@ out <- run_anaphase_models_for_ith_jobset(1,jobset_str,Inf,here::here("fits"),id
 
 #extract hidden states
 sigma_sim <- extract_hidden_states(out)
-
-
 

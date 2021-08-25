@@ -19,7 +19,7 @@ get_switch_probs_df <- function(sigma_sim,pairIDs,K){
 }
 
 get_directional_switch_events <- function(switch_probs_df, Data, dt=2.05, min_prob=0.5){
-  xyt_df = switch_probs_df %>% 
+xyt_df = switch_probs_df %>% 
   group_by(frame,SisterPairID,switch_type) %>%
   summarise(prob=mean(prob)) %>% #average over mcmc iterations
   ungroup() %>%
@@ -27,6 +27,10 @@ get_directional_switch_events <- function(switch_probs_df, Data, dt=2.05, min_pr
   mutate(Frame=frame,SisterPairID=as.integer(SisterPairID)) %>% 
   inner_join(Data,by=c("SisterPairID","Frame")) %>%
   mutate(Time=(Frame-1)*dt) %>%
-  dplyr::select(Position_2,Position_3,Time)
+  group_by(Frame,SisterPairID) %>%
+  summarise(Position_1=mean(Position_1),
+            Position_2=mean(Position_2),
+            Position_3=mean(Position_3),
+            Time=first(Time))
   return(xyt_df)
 }

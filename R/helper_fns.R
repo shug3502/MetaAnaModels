@@ -40,6 +40,18 @@ reorder_sisters <- function(Data){
     dplyr::select(-need_to_switch)
 }
 
+exclude_sisters_that_cross <- function(Data){
+  #crossing considered in 1D in x direction
+  crossing_df <- Data %>% dplyr::arrange(SisterID) %>% 
+    dplyr::group_by(SisterPairID,Frame) %>%
+    dplyr::summarise(kk_dist=first(Position_1)-last(Position_1)) %>% 
+    dplyr::group_by(SisterPairID) %>%
+    dplyr::summarise(crossed=any(!is.na(kk_dist) & (kk_dist<0)))
+  Data %>% dplyr::left_join(crossing_df,by="SisterPairID") %>%
+  dplyr::filter(!crossed) %>%
+  dplyr::select(-crossed)
+}
+
 process_jobset <- function(jobset_str,K=Inf,max_missing=0,start_from=0,plot_opt=0){
   #this function makes it easier to read tracking output of tracked kinetochores
 Data <- read.csv(jobset_str,header=TRUE) %>%
@@ -49,7 +61,8 @@ Data <- read.csv(jobset_str,header=TRUE) %>%
   dplyr::mutate(Position_3=interpolate_missing_data(Position_3,Time)) %>%
     dplyr::ungroup() %>%
     extract_long_tracks(K,start_from,max_missing) %>%
-    reorder_sisters()
+    reorder_sisters() %>%
+    exclude_sisters_that_cross()
   if (plot_opt){
     g <- ggplot(Data, aes(x=Time, y=Position_1,color=factor(SisterID))) +
       geom_line() +

@@ -78,6 +78,64 @@ functions {
     mu[2] = -th[3]*th[8]*cos(angleTheta);
     return mu;
   }
+
+  vector construct_transition_column(real p_icoh, real p_coh,
+                                     real p_ana, real p_reversal, real p_revtoana,
+                                     int sigma){
+    vector[6] P_col;
+    real q_icoh = 1-p_icoh;
+    real q_coh = 1-p_coh;
+    real q_ana = 1-p_ana;
+    real q_reversal = 1-p_reversal;
+    real q_revtoana = 1-p_revtoana;
+    if (sigma==1){
+    P_col = [p_icoh*p_icoh*q_ana,
+             p_coh*q_coh*q_ana,
+             p_coh*q_coh*q_ana,
+             q_icoh*q_icoh*q_ana,
+             0,
+             0]';
+    } else if(sigma==2){
+    P_col = [p_icoh*q_icoh*q_ana,
+              p_coh*p_coh*q_ana,
+              q_coh*q_coh*q_ana,
+              p_icoh*q_icoh*q_ana,
+              0,
+              0]';
+    } else if (sigma==3){
+    P_col = [p_icoh*q_icoh*q_ana,
+              q_coh*q_coh*q_ana,
+              p_coh*p_coh*q_ana,
+              p_icoh*q_icoh*q_ana,
+              0,
+              0]';
+    } else if (sigma==4){
+    P_col = [q_icoh*q_icoh*q_ana,
+              p_coh*q_coh*q_ana,
+              p_coh*q_coh*q_ana,
+              p_icoh*p_icoh*q_ana,
+              0,
+              0]';
+    } else if (sigma==5){
+    P_col = [p_ana,
+              p_ana,
+              p_ana,
+              p_ana,
+              1,
+              p_revtoana]';
+    } else if (sigma==6){
+    P_col = [0,
+              0,
+              0,
+              0,
+              p_reversal,
+              q_revtoana]';              
+    } else {
+      P_col=rep_vector(0,6);
+    }
+    return(P_col);
+  }
+
   real myDiff(vector v){
     real w;
     w = fabs(v[1] - v[2]);
@@ -227,28 +285,28 @@ model {
 generated quantities {
 //sampling from hidden states could go here
   int sigma_sim[nTracks,T];
-  vector[nStates] state_probs[nTracks]
-  vector[nStates] conditional_state_probs[nTracks]; //on log scale
-  vector[nStates] P_col[nTracks];
+  vector[nStates] state_probs[nTracks];
+  vector[nStates] conditional_state_probs; //on log scale
+  vector[nStates] P_col;
   int frame;
   for (ii in 1:nTracks) {
-    state_probs[ii] = xi[ii][T1]';
-    for (t in (T1+1):T) {
+      state_probs[ii] = xi[ii][T1[ii]]';
+    for (t in (T1[ii]+1):T) {
       sigma_sim[ii,t] = 0; //for time points with missing data
     }
-    for (t in 1:T0) {
+    for (t in 1:T0[ii]) {
       sigma_sim[ii,t] = 0; //for time points with missing data
     }
     //start with the final time pt
-    sigma_sim[ii,T1] = categorical_rng(state_probs[ii]);
-    for (t in 1:(T1-T0-1)){
-      frame = T1+1-t; //from T1 to T1+1-(T1-T0-1)=T0+2
-      P_col = construct_transition_column(p_icoh,p_coh,p_ana[ii][frame],sigma_sim[ii,frame]);
+    sigma_sim[ii,T1[ii]] = categorical_rng(state_probs[ii]);
+    for (t in 1:(T1[ii]-T0[ii]-1)){
+      frame = T1[ii]+1-t; //from T1 to T1+1-(T1-T0-1)=T0+2
+      P_col = construct_transition_column(p_icoh,p_coh,p_ana[ii][frame],p_reversal,p_revtoana,sigma_sim[ii,frame]);
       conditional_state_probs = log(P_col) + log(xi[ii][frame-1]');
       if (is_inf(sum(conditional_state_probs))){
-        sigma_sim[frame-1] = categorical_rng(exp(conditional_state_probs)/sum(exp(conditional_state_probs))); //get around overflow problems with logit this way
+        sigma_sim[ii,frame-1] = categorical_rng(exp(conditional_state_probs)/sum(exp(conditional_state_probs))); //get around overflow problems with logit this way
       } else {
-        sigma_sim[frame-1] = categorical_logit_rng(conditional_state_probs);
+        sigma_sim[ii,frame-1] = categorical_logit_rng(conditional_state_probs);
       }
     }
   }
