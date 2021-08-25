@@ -1,4 +1,4 @@
-args = commandArgs(trailingOnly=TRUE)
+vargs = commandArgs(trailingOnly=TRUE)
 library(rstan) 
 library(dplyr) 
 library(purrr)
@@ -36,7 +36,6 @@ print(path_to_folder)
 jobset_str_list <- list.files(path = path_to_folder,pattern="\\.csv$",full.names=TRUE)
 K_list <- rep(Inf,length(jobset_str_list))
 stopifnot(length(jobset_str_list)>0)
-
 #jobset_str <- here::here("data/OS_LLSM_200818_MC191_Untreated_2.04933s_per_frame//kittracking001-kitjobset_200825_DonaldDuck_auto_v125-OS_LLSM_200818_MC191_Untreated_capture10_flowdec_deconvolved.ome.csv")
 #data_single_pair <- process_jobset(jobset_str,K=Inf,max_missing=0.25) %>%
 #  filter(!is.na(SisterID)) #omit unpaired KTs
@@ -53,7 +52,7 @@ stopifnot(length(jobset_str_list)>0)
 
 for (i in seq_along(jobset_str_list)){
   #fit changepoint model and hierarchical model
-  out <- run_anaphase_models_for_ith_jobset(i,jobset_str_list[i],K_list[i],here::here("fits"),identifier,run_analysis,use_parallel,run_changept_anyway,dt,num_iter)
+  out <- run_anaphase_models_for_ith_jobset(i,jobset_str_list,K_list,here::here("fits"),identifier,run_analysis,use_parallel,run_changept_anyway,dt,num_iter)
 }  
 #extract hidden states
 #sigma_sim <- extract_hidden_states(out)
