@@ -61,7 +61,7 @@ fit_anaphase_reversals_model <- function(jobset_str, t_ana_df, K=Inf,
                      chains = 4,
                      warmup = num_iter,
                      iter = 2*num_iter,
-		     pars = c("eta","f","auxStates","P","p_ana","aux"),
+		     pars = c("eta","f","auxStates","P","p_ana","aux","state_probs","conditional_state_probs","P_col"),
 		     include=FALSE, #avoid saving the params listed above
                      control=list(adapt_delta=0.95,
                                   max_treedepth=12))
