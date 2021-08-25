@@ -66,7 +66,7 @@ fit_anaphase_reversals_model <- function(jobset_str, t_ana_df, K=Inf,
                      control=list(adapt_delta=0.95,
                                   max_treedepth=12))
     saveRDS(estimate, file = file.path(fits_folder_str,paste('anaphase_reversals_hierarchical_',identifier,'.rds',sep='')))
-  while ((!check_max_Rhat_less_than_tol(estimate)$converged) & num_iter < 500){
+  while ((!check_max_Rhat_less_than_tol(estimate)$converged) & num_iter < 100){
     #check if converged using default tolerance value 
     #if not, will need to run again
     num_iter <- num_iter*2

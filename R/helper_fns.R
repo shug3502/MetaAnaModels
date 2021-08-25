@@ -223,3 +223,22 @@ get_cos_phi <- function(Data,id){
     pull(cos_phi)
 }
 
+check_max_Rhat_less_than_tol <- function(output,tol=1.05){
+  #compare maximum rhat value with given tolerance
+  rhat <- tryCatch(rstan::summary(output)$summary[,"Rhat"],
+                  error=function(err) {return(Inf)})
+  is_less <- max(rhat,na.rm=TRUE) < tol
+  return(tibble(converged=is_less,
+                rhat=max(rhat,na.rm=TRUE)))
+}
+
+check_max_Rhat_less_than_tol_hierarchical <- function(output,tol=1.05,trackID=1){
+  #compare maximum rhat value with given tolerance, for each track separately
+  rhat <- tryCatch(rstan::summary(output)$summary[,"Rhat"],
+                  error=function(err) {return(Inf)})
+  nms <- names(rhat)
+  max_val <- rhat[nms[stringr::str_detect(nms,pattern=paste0("theta\\[",trackID,","))]] %>% max(.,na.rm=TRUE)
+  is_less <- max_val < tol
+  return(tibble(converged=is_less,
+                rhat=max_val))
+}
