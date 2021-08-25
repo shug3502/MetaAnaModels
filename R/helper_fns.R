@@ -54,6 +54,7 @@ exclude_sisters_that_cross <- function(Data){
 
 process_jobset <- function(jobset_str,K=Inf,max_missing=0,start_from=0,plot_opt=0){
   #this function makes it easier to read tracking output of tracked kinetochores
+stopifnot(!is.na(K))
 Data <- read.csv(jobset_str,header=TRUE) %>%
   dplyr::group_by(SisterPairID,SisterID) %>%
   dplyr::mutate(Position_1=interpolate_missing_data(Position_1,Time)) %>%

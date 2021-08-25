@@ -34,7 +34,7 @@ print(path_to_folder)
 #############################
 
 jobset_str_list <- list.files(path = path_to_folder,pattern="\\.csv$",full.names=TRUE)
-K_list <- rep(NA,length(jobset_str_list))
+K_list <- rep(Inf,length(jobset_str_list))
 stopifnot(length(jobset_str_list)>0)
 
 #jobset_str <- here::here("data/OS_LLSM_200818_MC191_Untreated_2.04933s_per_frame//kittracking001-kitjobset_200825_DonaldDuck_auto_v125-OS_LLSM_200818_MC191_Untreated_capture10_flowdec_deconvolved.ome.csv")
