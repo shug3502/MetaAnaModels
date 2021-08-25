@@ -25,7 +25,7 @@ dt=2.05
 run_analysis <- TRUE
 use_parallel <- FALSE
 run_changept_anyway <- FALSE
-num_iter <- 100
+num_iter <- 200
 identifier = args[1]
 path_to_folder = args[2]
 
