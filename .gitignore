@@ -1,5 +1,5 @@
 src/stan_files/*.rds
-fits/
+fits/*.rds
 plots/
 data/*/*.eps
 .Rproj.user
