@@ -21,17 +21,19 @@ tracked_summary_df <- Data_raw %>%
 df <- tracked_summary_df %>% group_by(filename) %>%
   arrange(1-proportion_tracked) %>%
   mutate(rn = row_number())
+ddx <- 0.1
 num_kts_plt <- ggplot(df,aes(x=proportion_tracked,y=rn,group=filename)) +
   geom_step(alpha=0.5,color=RColorBrewer::brewer.pal(n=4,"PiYG")[c(2)]) +
   geom_hline(aes(yintercept=92),color="grey",linetype="dashed") +
   geom_step(data=df %>% mutate(proportion_binned=cut(proportion_tracked,
                                                      right=FALSE,
-                                                     breaks=seq(from=0,to=1.1,by=0.1))) %>%
+                                                     breaks=seq(from=0,to=1+ddx,by=ddx))) %>%
               group_by(proportion_binned) %>%
               summarise(rn=median(rn)),
-            aes(x=c(seq(from=0.05,to=0.95,by=0.1),1),y=rn,group="1")) +
+            aes(x=c(seq(from=ddx/2,to=1-ddx/2,by=ddx),1),y=rn,group="1")) +
   theme_bw() +
   theme(legend.position="none") +
+  scale_y_continuous(limits=c(0,130)) +
   labs(x="Proportion of movie",
        y="Number of kinetochores")
 
@@ -52,12 +54,13 @@ num_pairs_plt <- ggplot(df,aes(x=proportion_tracked,y=rn,group=filename)) +
   geom_hline(aes(yintercept=46),color="grey",linetype="dashed") +
   geom_step(data=df %>% mutate(proportion_binned=cut(proportion_tracked,
                                                      right=FALSE,
-                                                     breaks=seq(from=0,to=1.1,by=0.1))) %>%
+                                                     breaks=seq(from=0,to=1+ddx,by=ddx))) %>%
               group_by(proportion_binned) %>%
               summarise(rn=median(rn)),
-            aes(x=c(seq(from=0.05,to=0.95,by=0.1),1),y=rn,group="1")) +
+            aes(x=c(seq(from=ddx/2,to=1-ddx/2,by=ddx),1),y=rn,group="1")) +
   theme_bw() +
   theme(legend.position="none") +
+  scale_y_continuous(limits=c(0,65)) +
   labs(x="Proportion of movie",
        y="Number of pairs")
 
