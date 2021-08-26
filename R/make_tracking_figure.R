@@ -1,4 +1,4 @@
-
+make_tracking_figure <- function(){
 jobset_str_list <- list.files(path="data/",pattern="*.csv",
                               recursive = TRUE,full.names = TRUE)
 Data_2s <- purrr::map(jobset_str_list,
@@ -128,5 +128,5 @@ tracks_within_metaphase_plate_plt <- Data_2s %>%
   tracks_within_metaphase_plate_plt + plot_layout(heights=c(1,2))
 ggsave(here::here("plots/tracking_fig_panel.eps"),device=cairo_ps,
        width=210,height=180,units="mm")
-
+}
 ################

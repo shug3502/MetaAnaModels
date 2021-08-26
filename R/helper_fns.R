@@ -12,7 +12,8 @@ extract_long_tracks <- function(Data,K=Inf,T0=0,max_missing=0){
   how_much_missing <- Data %>%
     dplyr::filter(Frame<=(T0+K), Frame>T0) %>% #assess only on first K frames, starting at frame T0 + 1
     dplyr::group_by(SisterPairID,SisterID) %>% #assess each track individually
-    dplyr::summarise(proportionNaN = sum(is.na(Position_1))/length(Position_1)) %>%
+    dplyr::summarise(proportionNaN = sum(is.na(Position_1))/length(Position_1),
+                     .groups = "drop_last") %>% #avoid message about grouping, see https://www.tidyverse.org/blog/2020/05/dplyr-1-0-0-last-minute-additions/ 
     dplyr::group_by(SisterPairID) %>% #combine to consider pairs together
     dplyr::summarise(proportionNaN = max(proportionNaN))
   Data <- dplyr::left_join(Data,how_much_missing) %>%
@@ -28,7 +29,7 @@ reorder_sisters <- function(Data){
   #ensures that sister 1 has on average the larger x (Position_1) coordinate
   Data %>%
     dplyr::group_by(SisterPairID,SisterID) %>%
-    dplyr::summarise(x = mean(Position_1,na.rm=T)) %>%
+    dplyr::summarise(x = mean(Position_1,na.rm=T),.groups= "drop_last") %>%
     dplyr::group_by(SisterPairID) %>%
     dplyr::summarise(need_to_switch = (first(x) - last(x))<0) %>%
     dplyr::right_join(Data) %>%
