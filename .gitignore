@@ -4,3 +4,5 @@ plots/
 data/*/*.eps
 .Rproj.user
 *.Rproj
+*.out
+*/*.out
