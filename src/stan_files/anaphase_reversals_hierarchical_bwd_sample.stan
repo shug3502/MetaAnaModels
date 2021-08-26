@@ -278,7 +278,7 @@ model {
     v_plus[ii] ~ normal(0.03,0.1) T[0,];
     v_ana[ii] ~ normal(0.03,0.1) T[0,];
     L[ii] ~ normal(0.790,0.119) T[0,];
-    t_ana[ii] ~ normal(t_ana_input[ii],3*dt) T[0,T*dt];
+    t_ana[ii] ~ normal(t_ana_input[ii],20*dt) T[0,T*dt];
     target += sum(log(f[ii]));
   }
 }
