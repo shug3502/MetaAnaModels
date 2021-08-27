@@ -18,14 +18,13 @@ source(here::here('R/helper_fns.R'))
 source(here::here('R/fit_anaphase_changept_model.R'))
 source(here::here('R/fit_anaphase_reversals_model.R'))
 source(here::here('R/run_anaphase_models_for_ith_jobset.R'))
-source(here::here('R/extract_hidden_states.R'))
 ##############################
 #options etc
 dt=2.05
 run_analysis <- TRUE
 use_parallel <- FALSE
 run_changept_anyway <- FALSE
-num_iter <- 200
+num_iter <- 500
 identifier = args[1]
 path_to_folder = args[2]
 
@@ -35,7 +34,9 @@ print(path_to_folder)
 
 jobset_str_list <- list.files(path = path_to_folder,pattern="\\.csv$",full.names=TRUE)
 K_list <- rep(Inf,length(jobset_str_list))
-stopifnot(length(jobset_str_list)>0)
+nJobsets <- length(jobset_str_list)
+stopifnot(nJobsets>0)
+
 #jobset_str <- here::here("data/OS_LLSM_200818_MC191_Untreated_2.04933s_per_frame//kittracking001-kitjobset_200825_DonaldDuck_auto_v125-OS_LLSM_200818_MC191_Untreated_capture10_flowdec_deconvolved.ome.csv")
 #data_single_pair <- process_jobset(jobset_str,K=Inf,max_missing=0.25) %>%
 #  filter(!is.na(SisterID)) #omit unpaired KTs
@@ -50,10 +51,9 @@ stopifnot(length(jobset_str_list)>0)
 #g
 #ggsave(here::here("plots/200818_untreated_capture10_all_pairs.eps"),width=7,height=7)
 
-for (i in seq_along(jobset_str_list)){
+#for (i in seq_along(jobset_str_list)){
+for (i in sample.int(nJobsets,size=nJobsets,replace=FALSE)){ #go through jobsets in random order
   #fit changepoint model and hierarchical model
   out <- run_anaphase_models_for_ith_jobset(i,jobset_str_list,K_list,here::here("fits"),identifier,run_analysis,use_parallel,run_changept_anyway,dt,num_iter)
 }  
-#extract hidden states
-#sigma_sim <- extract_hidden_states(out)
 
