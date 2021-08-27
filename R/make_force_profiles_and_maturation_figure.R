@@ -1,29 +1,65 @@
-make_force_profile_and_maturation_figure(){
+make_force_profile_and_maturation_figure <- function(jobset_str_list,identifier,
+                                         num_iter=200,dt=2.05,min_num_sisters=10,nframes_early=300,
+                                         fits_folder_str="fits"){
+  #warning on memory usage for all MCMC iterations across many cells
 Data_2s <- purrr::map(jobset_str_list,
                       function(x) process_jobset(x,max_missing=0.25,K=Inf,
                                                  plot_opt=FALSE)) %>%
   bind_rows(.id="cell") %>%
-  mutate(filename=jobset_str_list[as.integer(cell)])
+  mutate(filename=jobset_str_list[as.integer(cell)]) %>%
+  add_kittracking_column()
 
 draws <- bind_rows(readRDS('~/Documents/Postdoc/Modelling/AnaStanRefactor/AnaStan/fits/median_anaphase_reversals_parameter_estimates_JHprocess_LIDS_TIDS_2s_v303.rds'),
                    readRDS('~/Documents/Postdoc/Modelling/AnaStanRefactor/AnaStan/fits/median_anaphase_reversals_parameter_estimates_JHprocess_LIDS_TIDS_2s_v304.rds'))
+ktf_all <- unique(Data_2s$kittracking_file_str) #ids of all cells
 
-ktf <- Data_2s %>% add_kittracking_column() %>% pull(kittracking_file_str) %>% first()
-Data <- Data_2s %>% add_kittracking_column() %>% filter(kittracking_file_str==ktf)
-pairIDs <- Data %>% pull(SisterPairID) %>% unique()
-K=307
-get_states_df <- function(mcmc_iter,sigma_sim,pairIDs,K){
-  states_df <- tibble(state=c(t(sigma_sim[[mcmc_iter]])),
-                      SisterPairID=rep(pairIDs,K),
-                      Frame=rep(seq_len(K),length(pairIDs)))
-}
-states_df <- purrr::map_df(1:4,function(x) get_states_df(x,sigma_sim,pairIDs,K),.id="iter")
-
-forces_df <- states_df %>% mutate(kittracking_file_str=ktf) %>%
+#generate ana times df and complex positions etc
+ana_times_df <- draws %>%
+  mutate(t_ana = if_else(param=="t_ana",theta,NA_real_)) %>%
+  group_by(cell,filename,SisterPairID) %>%
+  summarise(t_ana = median(t_ana,na.rm=TRUE)) %>%
+  ungroup() %>%
+  mutate(cell=as.integer(cell),
+         kittracking_file_str = filename %>% stringr::str_split('/') %>% purrr::map(last)) %>%
+  tidyr::unnest()
+complex_positions_by_frame_treatment_df <- Data_2s %>%
   full_join(ana_times_df,by=c("kittracking_file_str","SisterPairID")) %>%
   mutate(Frames_since_start = Frame - t_ana%/%dt) %>%
-  dplyr::select(-t_ana) %>%
-  inner_join(complex_positions_by_frame_treatment_df,by=c("kittracking_file_str","SisterPairID","Frames_since_start")) %>%
+  filter(Frames_since_start < nframes_early) %>%
+  filter(Frames_since_start >= -nframes_early) %>%
+  group_by(kittracking_file_str,Frames_since_start,SisterPairID,SisterID) %>%
+  summarise(Position_1 = first(Position_1),
+            Position_2 = first(Position_2),
+            Position_3 = first(Position_3)) %>%
+  group_by(kittracking_file_str) %>%
+  filter(length(unique(SisterPairID))>min_num_sisters) %>%
+  mutate(filename=kittracking_file_str)
+
+get_states_df <- function(mcmc_iter,sigma_sim,pairIDs,K){
+  states_df <- tibble(state=c(t(sigma_sim[[mcmc_iter]])),
+                      SisterPairID=purrr::map(pairIDs,function(x) rep(x,K)) %>% unlist(),
+                      Frame=rep(seq_len(K),length(pairIDs)))
+}
+get_states_df_for_cell <- function(ktf,Data_2s,num_iter){
+  Data <- Data_2s %>% filter(kittracking_file_str==ktf)
+  jobset_str <- Data$filename
+  pairIDs <- Data %>% pull(SisterPairID) %>% unique()
+  K <- max(Data$Frame)
+  sigma_sim <- extract_hidden_states(NULL,jobset_str,fits_folder_str=fits_folder_str,identifier=identifier) #load sigma_sim
+  states_df <- purrr::map_df(1:num_iter,function(x) get_states_df(x,sigma_sim,pairIDs,K),
+                           .id="iter")
+}
+
+all_states_df <- purrr::map_df(ktf_all,function(x) get_states_df_for_cell(x,Data_2s,num_iter),
+                               .id="cell") %>%
+  mutate(kittracking_file_str=ktf_all[as.integer(cell)])
+  
+forces_df <- all_states_df %>%
+  inner_join(ana_times_df,by=c("kittracking_file_str","SisterPairID")) %>%
+  mutate(Frames_since_start = Frame - t_ana%/%dt) %>%
+  dplyr::select(-t_ana,-cell.x,-cell.y,-Frame,-filename) %>%
+  inner_join(complex_positions_by_frame_treatment_df,
+             by=c("kittracking_file_str","SisterPairID","Frames_since_start")) %>%
   inner_join(draws %>% dplyr::select(-state,-timept) %>% 
                tidyr::spread(key=param,value=theta) %>% 
                add_kittracking_column(),by=c("kittracking_file_str","SisterPairID")) %>% 
@@ -82,4 +118,4 @@ plt2 <- forces_df %>% mutate(is_ana=factor(if_else(`K-fibre (Ana)`>0,"Ana","Meta
 
 plt1 | plt2
 ggsave(here::here("plots/force_profiles_around_anaphase_and_barchart.eps"),device=cairo_ps,width=4.5,height=4.5)
-}
+} 
