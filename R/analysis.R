@@ -15,11 +15,12 @@ library(tidyr)
 rstan::rstan_options(auto_write = TRUE) #tries to avoid recompiling stan code
 options(mc.cores = parallel::detectCores()) #uses as many cores as you have
 source(here::here('R/helper_fns.R'))
+source(here::here('R/make_tracking_figure.R'))
+source(here::here('R/make_population_params_and_heterogeneity_figure.R'))
 source(here::here('R/switching_analysis_helper_fns.R'))
 source(here::here('R/hawkes_process_analysis.R'))
 source(here::here('R/get_directional_switch_events.R'))
 source(here::here('R/extract_hidden_states.R'))
-source(here::here('R/make_tracking_figure.R'))
 ##############################
 #options etc
 dt=2.05
@@ -28,8 +29,18 @@ identifier = args[1]
 path_to_folder = args[2]
 #############################
 
-#for Figure 1
+#for Figure 1: tracking
 make_tracking_figure()
+
+#############################
+#Figures 2 to 4 generated separately or to be added later
+#############################
+#Figure 5: Distribution of population parameters and heterogeneity
+make_population_params_and_heterogeneity_figure()
+
+#############################
+#Figure 6: Force profiles and maturation
+
 
 jobset_str_list <- list.files(path = path_to_folder,pattern="\\.csv$",full.names=TRUE)
 K_list <- rep(Inf,length(jobset_str_list))

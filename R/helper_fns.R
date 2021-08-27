@@ -243,3 +243,13 @@ check_max_Rhat_less_than_tol_hierarchical <- function(output,tol=1.05,trackID=1)
   return(tibble(converged=is_less,
                 rhat=max_val))
 }
+
+add_kittracking_column <- function(draws){
+  #draws is a tibble or data.frame containing a column filename with treatment info in that string
+  #the kittracking column is helpful when wanting to join and compare parameter estimates with raw descriptive stats of data when filenames are different due to data in different location
+  draws_with_kittracking <- draws %>% group_by(filename) %>%
+  summarise(kittracking_file_str = first(filename) %>% stringr::str_split('/') %>% purrr::map(last)) %>%
+  tidyr::unnest()
+  draws %>% left_join(draws_with_kittracking,by="filename")
+}
+
