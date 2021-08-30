@@ -1,6 +1,6 @@
-make_tracking_figure <- function(){
-jobset_str_list <- list.files(path="data/",pattern="*.csv",
-                              recursive = TRUE,full.names = TRUE)
+make_tracking_figure <- function(jobset_str_list){
+#jobset_str_list <- list.files(path="data/",pattern="*.csv",
+#                              recursive = TRUE,full.names = TRUE)
 Data_2s <- purrr::map(jobset_str_list,
                       function(x) process_jobset(x,max_missing=0.95,K=Inf,
                                                  plot_opt=FALSE)) %>%

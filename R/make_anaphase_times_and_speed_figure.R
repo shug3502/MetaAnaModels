@@ -1,5 +1,12 @@
-make_anaphase_times_and_speed_figure <- function(Data_2s,draws){
-  #get all the interesting stats, and simple positions by frame df
+make_anaphase_times_and_speed_figure <- function(jobset_str_list,draws){
+
+Data_2s <- purrr::map(jobset_str_list,
+                      function(x) process_jobset(x,max_missing=0.25,K=Inf,
+                                                 plot_opt=FALSE)) %>%
+  bind_rows(.id="cell") %>%
+  mutate(filename=jobset_str_list[as.integer(cell)]) %>%
+  add_kittracking_column()
+
   ana_margin <- 60
   ana_times_df <- draws %>% 
     mutate(t_ana = if_else(param=="t_ana",theta,NA_real_)) %>%

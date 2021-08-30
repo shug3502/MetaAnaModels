@@ -31,24 +31,34 @@ dt=2.05
 fits_folder_str <- "fits"
 identifier = args[1]
 path_to_folder = args[2]
+
+jobset_str_list <- list.files(path="data/",pattern="*.csv",
+                              recursive = TRUE,full.names = TRUE)
+draws <- summarise_batch_anaphase_reversals(identifier,jobset_str_list,dt=dt,
+                                     fits_folder_str = fits_folder_str,
+                                     max_missing = 0.25,tol = 1.05,
+                                     run_analysis = FALSE,
+                                     use_parallel = FALSE)
 #############################
 
 #for Figure 1: tracking
-make_tracking_figure()
+make_tracking_figure(jobset_str_list)
 
 #############################
 #Figures 2 to 4 generated separately or to be added later
 #############################
 #Figure 5: Distribution of population parameters and heterogeneity
-make_population_params_and_heterogeneity_figure()
+make_population_params_and_heterogeneity_figure(jobset_str_list,draws)
 
 #############################
 #Figure 6: Force profiles and maturation
-make_force_profile_and_maturation_figure()
+make_force_profile_and_maturation_figure(jobset_str_list,draws,identifier,
+                                         num_iter=200,dt=dt,min_num_sisters=10,nframes_early=300,
+                                         fits_folder_str=fits_folder_str)
 
 #############################
 #Figure 7: anaphase times and speeds
-make_anaphase_times_and_speed_figure()
+make_anaphase_times_and_speed_figure(jobset_str_list,draws)
 
 #############################
 #Figure 8: Directional switching

@@ -1,4 +1,4 @@
-make_force_profile_and_maturation_figure <- function(jobset_str_list,identifier,
+make_force_profile_and_maturation_figure <- function(jobset_str_list,draws,identifier,
                                          num_iter=200,dt=2.05,min_num_sisters=10,nframes_early=300,
                                          fits_folder_str="fits"){
   #warning on memory usage for all MCMC iterations across many cells
@@ -9,8 +9,8 @@ Data_2s <- purrr::map(jobset_str_list,
   mutate(filename=jobset_str_list[as.integer(cell)]) %>%
   add_kittracking_column()
 
-draws <- bind_rows(readRDS('~/Documents/Postdoc/Modelling/AnaStanRefactor/AnaStan/fits/median_anaphase_reversals_parameter_estimates_JHprocess_LIDS_TIDS_2s_v303.rds'),
-                   readRDS('~/Documents/Postdoc/Modelling/AnaStanRefactor/AnaStan/fits/median_anaphase_reversals_parameter_estimates_JHprocess_LIDS_TIDS_2s_v304.rds'))
+#draws <- bind_rows(readRDS('~/Documents/Postdoc/Modelling/AnaStanRefactor/AnaStan/fits/median_anaphase_reversals_parameter_estimates_JHprocess_LIDS_TIDS_2s_v303.rds'),
+#                   readRDS('~/Documents/Postdoc/Modelling/AnaStanRefactor/AnaStan/fits/median_anaphase_reversals_parameter_estimates_JHprocess_LIDS_TIDS_2s_v304.rds'))
 ktf_all <- unique(Data_2s$kittracking_file_str) #ids of all cells
 
 #generate ana times df and complex positions etc

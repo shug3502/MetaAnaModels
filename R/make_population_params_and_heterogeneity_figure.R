@@ -1,14 +1,14 @@
-make_population_params_and_heterogeneity_figure <- function(){
-jobset_str_list <- list.files(path="data/",pattern="*.csv",
-                              recursive = TRUE,full.names = TRUE)
+make_population_params_and_heterogeneity_figure <- function(jobset_str_list,draws){
+#jobset_str_list <- list.files(path="data/",pattern="*.csv",
+#                              recursive = TRUE,full.names = TRUE)
 Data_2s <- purrr::map(jobset_str_list,
                       function(x) process_jobset(x,max_missing=0.95,K=Inf,
                                                  plot_opt=FALSE)) %>%
   bind_rows(.id="cell") %>%
   mutate(filename=jobset_str_list[as.integer(cell)])
 
-draws <- bind_rows(readRDS('~/Documents/Postdoc/Modelling/AnaStanRefactor/AnaStan/fits/median_anaphase_reversals_parameter_estimates_JHprocess_LIDS_TIDS_2s_v303.rds'),
-                   readRDS('~/Documents/Postdoc/Modelling/AnaStanRefactor/AnaStan/fits/median_anaphase_reversals_parameter_estimates_JHprocess_LIDS_TIDS_2s_v304.rds'))
+#draws <- bind_rows(readRDS('~/Documents/Postdoc/Modelling/AnaStanRefactor/AnaStan/fits/median_anaphase_reversals_parameter_estimates_JHprocess_LIDS_TIDS_2s_v303.rds'),
+#                   readRDS('~/Documents/Postdoc/Modelling/AnaStanRefactor/AnaStan/fits/median_anaphase_reversals_parameter_estimates_JHprocess_LIDS_TIDS_2s_v304.rds'))
 
 individual_plt <- draws %>%
   filter(param %in% c("tau","alpha","kappa","v_minus","v_plus","L")) %>%

@@ -253,3 +253,135 @@ add_kittracking_column <- function(draws){
   draws %>% left_join(draws_with_kittracking,by="filename")
 }
 
+get_and_process_results_reversals <- function(jobset_str,K,identifier,
+                                    max_missing=0.25,
+                                    tol=1.05,
+                                    run_analysis=FALSE,
+                                    use_parallel=FALSE,
+                                    fits_folder_str=here::here('fits'),
+				    dt=4.7){
+  #this operates on a single jobset for a single cell
+cat(paste("Analysing jobset: ",jobset_str,"\n",sep=""))
+results <- tryCatch({
+  changept_out <- fit_anaphase_changept_model(jobset_str, K=K,
+                                              identifier = paste(identifier,"_change_pt",sep=""),
+                                              run_analysis = run_analysis,
+                                              fits_folder_str = fits_folder_str,
+                                              plot_opt = 0
+  )
+  t_ana_input_df <- changept_out %>%
+    spread_draws(t_ana[track]) %>%
+    summarise(t_ana=median(t_ana))
+  out <- fit_anaphase_reversals_model(jobset_str,t_ana_input_df, K=K,
+                                           identifier = identifier,
+                                           run_analysis = run_analysis,
+                                           use_parallel = use_parallel,
+                                           fits_folder_str = fits_folder_str,
+                                           plot_opt=0, dt=dt
+)
+  cat("Done ...\n")
+
+  ########
+  Data <- process_jobset(jobset_str,K=K,max_missing=max_missing,plot_opt=0)
+  pairIDs <- unique(Data$SisterPairID)
+  intersister_dist_df <- Data %>% group_by(SisterPairID,Time) %>%
+    filter((Time>=0) & (Time<median(t_ana_input_df$t_ana,na.rm=TRUE))) %>% #ignore the NAs, restrict to metaphase
+    summarise(intersister_dist = abs(diff(Position_1))) %>%
+    group_by(SisterPairID) %>%
+    summarise(av_intersister_dist = median(intersister_dist,na.rm=TRUE))
+  radius_df <- Data %>% group_by(SisterPairID) %>%
+    filter((Time>=0) & (Time<median(t_ana_input_df$t_ana,na.rm=TRUE))) %>%
+    summarise(av_radius = median(sqrt(Position_2^2+Position_3^2),na.rm=TRUE))
+#check for convergence for each Sister Pair individually
+  converged_df <- purrr::map(seq_along(pairIDs), function(x) check_max_Rhat_less_than_tol_hierarchical(out,tol=tol,trackID=x)) %>%
+    bind_rows(.id="track") %>%
+    mutate(SisterPairID = pairIDs[as.integer(track)])
+  #results object goes here and contains median parameter estimates for all the key params
+#extract parameters for each sister Pair
+  results <- tryCatch({spread_draws(model=out,theta[track,param],p_reversal,p_revtoana) %>% #this is the memory intensive part: xi[track,timept,state]
+                                       summarise(theta = median(theta,na.rm=TRUE),
+                                                 xi    = NA, #median(xi,na.rm=TRUE),
+                                                 #v_ana = median(v_ana,na.rm=TRUE),
+						 #t_ana = median(t_ana,na.rm=TRUE),
+						 p_reversal = median(p_reversal,na.rm=TRUE),
+						 p_revtoana = median(p_revtoana,na.rm=TRUE))
+ }, error = function(err) {
+print(err) #this catches trajectories within a cell when there has been an error in a majority but don't lose the cell
+tibble(param=NA,theta=NA,timept=NA,state=NA,xi=NA,p_reversal=NA,p_revtoana=NA)
+})  %>%
+    mutate(SisterPairID = pairIDs[as.integer(track)]) %>%
+    left_join(converged_df %>% select(-track),by=c("SisterPairID")) %>% #add info about whether each track converged
+    left_join(intersister_dist_df,by=c("SisterPairID")) %>% #add average intersister dist
+    left_join(radius_df,by=c("SisterPairID")) #add average radius
+}, error = function(err) {
+  print(err)
+  results <- tibble(track = NA,
+                   param = NA,
+                   timept = NA,
+                   state = NA,
+                   theta = NA,
+                   xi = NA,
+		   p_reversal = NA,
+		   p_revtoana = NA,
+                   SisterPairID = NA,
+                   converged = NA,
+                   rhat = NA,
+                   av_intersister_dist = NA,
+                   av_radius = NA)
+})
+  return(results)
+}
+
+summarise_batch_anaphase_reversals <- function(identifier,jobset_str_list,
+				     dt = 4.7,
+				     fits_folder_str = here::here("fits"),
+				     max_missing = 0.25,
+				     tol = 1.05,
+				     run_analysis = FALSE,
+				     use_parallel = FALSE
+				    ){
+
+##this function gets the results for all cells/jobs from a folder
+##########################
+if (any(is.na(jobset_str_list))){
+  jobset_str_list <- list.files(path = path_to_folder,pattern="\\.csv$",full.names=TRUE)
+}
+
+if (use_parallel){
+  library(furrr)
+#  plan(multiprocess,workers=parallel::detectCores()) #on nero need to specify how many workers here
+  plan(multiprocess,workers=parallel::detectCores()-1)
+  my_map2 <- furrr::future_map2
+} else {
+  my_map2 <- purrr::map2
+}
+
+K_list <- rep(Inf,length(jobset_str_list)) #assume use all of the available movies
+#Note that previously for metaphase analysis needed to exclude portion with anaphase, now want full tracks and ideally only ones *with* anaphase
+
+results <- my_map2(jobset_str_list,K_list,function(x,y) get_and_process_results_reversals(x,y,identifier,
+           max_missing=max_missing,
+           tol=tol,
+           run_analysis=run_analysis,
+           use_parallel=FALSE, #got error is.finite(workers) is not TRUE suggested breaking when parallelising everything at once
+           fits_folder_str=fits_folder_str,
+	   dt=dt))
+
+draws <- results %>% bind_rows(.id="cell") %>%
+mutate(filename=jobset_str_list[as.integer(cell)]) %>%
+  group_by(filename,cell,SisterPairID) %>%
+  mutate(param = case_when(
+    param==1 ~ "tau",
+    param==2 ~ "alpha",
+    param==3 ~ "kappa",
+    param==4 ~ "v_minus",
+    param==5 ~ "v_plus",
+    param==6 ~ "p_icoh",
+    param==7 ~ "p_coh",
+    param==8 ~ "L",
+    param==9 ~ "v_ana",
+    param==10 ~ "t_ana"
+  ))
+saveRDS(draws,here::here(paste('fits/median_anaphase_reversals_parameter_estimates_',identifier,'.rds',sep='')))
+return(draws)
+}
