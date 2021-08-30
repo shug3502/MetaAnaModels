@@ -17,8 +17,12 @@ options(mc.cores = parallel::detectCores()) #uses as many cores as you have
 source(here::here('R/helper_fns.R'))
 source(here::here('R/make_tracking_figure.R'))
 source(here::here('R/make_population_params_and_heterogeneity_figure.R'))
+source(here::here('R/make_anaphase_times_and_speed_figure.R'))
+source(here::here('R/generate_figures_based_on_states_and_switching.R'))
 source(here::here('R/switching_analysis_helper_fns.R'))
 source(here::here('R/hawkes_process_analysis.R'))
+source(here::here('R/make_coordination_of_anaphase_onset_figure.R'))
+source(here::here('R/make_local_coordination_agreement_figure.R'))
 source(here::here('R/get_directional_switch_events.R'))
 source(here::here('R/extract_hidden_states.R'))
 ##############################
@@ -40,7 +44,27 @@ make_population_params_and_heterogeneity_figure()
 
 #############################
 #Figure 6: Force profiles and maturation
+make_force_profile_and_maturation_figure()
 
+#############################
+#Figure 7: anaphase times and speeds
+make_anaphase_times_and_speed_figure()
+
+#############################
+#Figure 8: Directional switching
+generate_figures_based_on_states_and_switching()
+
+#############################
+#Figure 9: Coordination of switches via Hawkes process
+hawkes_process_analysis()
+
+#############################
+#Figure 10: local coordination and agreement
+make_local_coordination_agreement_figure()
+
+#############################
+#Figure 11: coordination of anaphase onset
+make_coordination_of_anaphase_onset_figure()
 
 jobset_str_list <- list.files(path = path_to_folder,pattern="\\.csv$",full.names=TRUE)
 K_list <- rep(Inf,length(jobset_str_list))

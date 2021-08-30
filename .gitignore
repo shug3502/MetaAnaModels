@@ -6,3 +6,4 @@ data/*/*.eps
 *.Rproj
 *.out
 */*.log
+.Rhistory
