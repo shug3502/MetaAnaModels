@@ -1,5 +1,8 @@
-make_coordination_of_anaphase_onset_figure <- function(data_single_pair,estimate,dt=2.05){
+make_coordination_of_anaphase_onset_figure <- function(jobset_str,estimate,dt=2.05){
 
+data_single_pair <- process_jobset(jobset_str,K=Inf,max_missing=0.25) %>%
+    filter(!is.na(SisterID)) #omit unpaired KTs
+  
 anaphase_onset_df <- spread_draws(estimate,t_ana[pair]) %>% 
   mutate(SisterPairID = pairIDs[as.integer(pair)]) %>%
   group_by(SisterPairID) %>%

@@ -32,8 +32,11 @@ fits_folder_str <- "fits"
 identifier = args[1]
 path_to_folder = args[2]
 
-jobset_str_list <- list.files(path="data/",pattern="*.csv",
-                              recursive = TRUE,full.names = TRUE)
+jobset_str_list <- list.files(path = path_to_folder,pattern="\\.csv$",
+                              full.names=TRUE,recursive=TRUE)
+K_list <- rep(Inf,length(jobset_str_list))
+stopifnot(length(jobset_str_list)>0)
+
 draws <- summarise_batch_anaphase_reversals(identifier,jobset_str_list,dt=dt,
                                      fits_folder_str = fits_folder_str,
                                      max_missing = 0.25,tol = 1.05,
@@ -60,25 +63,26 @@ make_force_profile_and_maturation_figure(jobset_str_list,draws,identifier,
 #Figure 7: anaphase times and speeds
 make_anaphase_times_and_speed_figure(jobset_str_list,draws)
 
-#############################
-#Figure 8: Directional switching
-generate_figures_based_on_states_and_switching()
-
-#############################
-#Figure 9: Coordination of switches via Hawkes process
-hawkes_process_analysis()
-
-#############################
-#Figure 10: local coordination and agreement
-make_local_coordination_agreement_figure()
-
-#############################
-#Figure 11: coordination of anaphase onset
-make_coordination_of_anaphase_onset_figure()
-
-jobset_str_list <- list.files(path = path_to_folder,pattern="\\.csv$",full.names=TRUE)
-K_list <- rep(Inf,length(jobset_str_list))
-stopifnot(length(jobset_str_list)>0)
+# #############################
+# #Figure 8: Directional switching
+# #TODO: sort this out by looping over jobs or changin how it works
+# generate_figures_based_on_states_and_switching(estimate,sigma_sim,jobset_str,identifier,dt=dt)
+# 
+# #############################
+# #Figure 9: Coordination of switches via Hawkes process
+# #TODO: similarly
+# hawkes_process_analysis(sigma_sim,jobset_str,dt)
+# 
+# #############################
+# #Figure 10: local coordination and agreement
+# #TODO: similarly
+# make_local_coordination_agreement_figure(jobset_str,estimate,dt=dt,
+#                                                      nStates=6,niter=200)
+# 
+# #############################
+# #Figure 11: coordination of anaphase onset
+# #similarly
+# make_coordination_of_anaphase_onset_figure(data_single_pair,estimate,dt=dt)
 
 for (i in seq_along(jobset_str_list)){
   #extract hidden states
@@ -86,19 +90,38 @@ for (i in seq_along(jobset_str_list)){
   job_id = stringr::str_split(jobset_str_list[i],"kittracking")[[1]][2]
   edited_job_id = paste(job_id %>%
                        stringr::str_replace_all("\\.",""),identifier,sep="")
-  path_to_est <- file.path(fits_folder_str,paste('anaphase_reversals_hierarchical_',edited_job_id,'.rds',sep=''))
-#  path_to_est <- here::here("../Constandia/estimate.rds")
+  path_to_est <- file.path(fits_folder_str,paste('anaphase_reversals_hierarchical_',
+                                                 edited_job_id,'.rds',sep=''))
   if (file.exists(path_to_est)){
     estimate <- readRDS(file=path_to_est)
     sigma_sim <- extract_hidden_states(estimate)
-#    sigma_sim <- readRDS(here::here("../Constandia/sigma_sim.rds"))
-    success = generate_figures_based_on_states_and_switching(estimate,sigma_sim,jobset_str_list[i],
-							     paste0(identifier,"cell",i),dt)
+#     success = generate_figures_based_on_states_and_switching(estimate,sigma_sim,jobset_str_list[i],
+# 							     paste0(identifier,"cell",i),dt)
+    #############################
+    #Figure 8: Directional switching
+    #TODO: sort this out by looping over jobs or changin how it works
+    generate_figures_based_on_states_and_switching(estimate,sigma_sim,jobset_str_list[i],
+                                                   paste0(identifier,"cell",i),dt=dt)
+    
+    #############################
+    #Figure 9: Coordination of switches via Hawkes process
+    #TODO: similarly
+    hawkes_process_analysis(sigma_sim,jobset_str_list[i],dt)
+    
+    #############################
+    #Figure 10: local coordination and agreement
+    #TODO: similarly
+    make_local_coordination_agreement_figure(jobset_str_list[i],estimate,dt=dt,
+                                             nStates=6,niter=200)
+    
+    #############################
+    #Figure 11: coordination of anaphase onset
+    #similarly
+    make_coordination_of_anaphase_onset_figure(jobset_str_list[i],estimate,dt=dt)
+    
   } else {
     cat('Files from sampling do not exist. Skipping this cell.\n')
     success=0
   }
   if (success){cat("SUCCESS!\n")} else {cat("FAILED :(\n")}
-
-hawkes_fit <- hawkes_process_analysis(sigma_sim,jobset_str_list[i],dt)
 }
