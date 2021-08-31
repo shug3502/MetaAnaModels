@@ -45,5 +45,5 @@ ggplot(data=tibble(dist=av_dist_between_successive_pairs_sim),
   labs(x="Average distance between kinetochore\npairs at anaphase onset (um)",
        y="Number of simulations")
 ggsave(here::here("plots/av_distance_between_pairs_at_anaphase_onset.eps"),
-       device=cairo_ps,width=6,height=4)
+       width=6,height=4)
 }

@@ -325,7 +325,7 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
     geom_line() + 
     theme_bw() + labs(x="Lag (s)",
                       y="Autocorrelation")
-  ggsave(here::here("plots/average_autocorrelation_100sims_4state_markov_model.eps"),device=cairo_ps,
+  ggsave(here::here("plots/average_autocorrelation_100sims_4state_markov_model.eps"),
          width=4,height=4)
   
   ggplot(tibble(J=ensemble),aes(J)) + 
@@ -337,7 +337,7 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
     labs(x="Average agreement in states\nbetween a KT and its neighbours",
          y="Number of simulations")
   ggsave(here::here("plots/simulated_agreement_vs_observed_agreement.eps"),
-         device=cairo_ps,width=210,height=140,units="mm")
+         width=210,height=140,units="mm")
   
   pdf(here::here("plots/positions_of_kt_pairs_in_plate.pdf"))
   plot(positions,xlab='y position (um)',ylab='z position (um)')

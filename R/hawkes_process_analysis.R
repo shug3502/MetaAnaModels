@@ -61,7 +61,7 @@ g = g + scale_shape_identity()
 g = g + scale_alpha_identity()
 g = g + theme_bw() + labs(x="y Position (um)",y="z Position (um)")
 g
-ggsave(here::here(paste0("plots/switching_background_vs_excitory_from_hawkes_process_",edited_job_id,".eps")),device=cairo_ps,width=4,height=4)
+ggsave(here::here(paste0("plots/switching_background_vs_excitory_from_hawkes_process_",edited_job_id,".eps")),width=4,height=4)
 return(g)
 }
 
@@ -100,6 +100,6 @@ geom_tile() + theme_bw() +
 scale_fill_distiller(palette="Greys",direction=1) +
 labs(x="Time (min)",y="Distance (um)",fill="Intensity\n(#/um min)")
 h
-ggsave(here::here(paste0("plots/hawkes_kernel_in_2d_",edited_job_id,".eps")),device=cairo_ps,width=4,height=4)
+ggsave(here::here(paste0("plots/hawkes_kernel_in_2d_",edited_job_id,".eps")),width=4,height=4)
 return(h)
 }

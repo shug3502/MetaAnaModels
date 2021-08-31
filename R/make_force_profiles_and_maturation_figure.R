@@ -24,7 +24,7 @@ ana_times_df <- draws %>%
   tidyr::unnest()
 
 #align to anaphase for each trajectory rather than the median for each cell
-complex_positions_by_frame_treatment_df <- Data_2s %>%
+complex_positions_by_frame_df <- Data_2s %>%
   full_join(ana_times_df,by=c("kittracking_file_str","SisterPairID")) %>%
   mutate(Frames_since_start = Frame - t_ana%/%dt) %>%
   filter(Frames_since_start < nframes_early) %>%
@@ -60,9 +60,9 @@ forces_df <- all_states_df %>%
   inner_join(ana_times_df,by=c("kittracking_file_str","SisterPairID")) %>%
   mutate(Frames_since_start = Frame - t_ana%/%dt) %>%
   dplyr::select(-t_ana,-cell.x,-cell.y,-Frame,-filename) %>%
-  inner_join(complex_positions_by_frame_treatment_df,
+  inner_join(complex_positions_by_frame_df,
              by=c("kittracking_file_str","SisterPairID","Frames_since_start")) %>%
-  inner_join(draws %>% dplyr::select(-state,-timept) %>% 
+  inner_join(draws %>% dplyr::select(-xi) %>% 
                tidyr::spread(key=param,value=theta) %>% 
                add_kittracking_column(),by=c("kittracking_file_str","SisterPairID")) %>% 
   group_by(iter,Frames_since_start,kittracking_file_str,SisterPairID) %>%
@@ -101,7 +101,7 @@ plt1 <- forces_df %>%
   guides(color=guide_legend(ncol=2)) +
   labs(x="Time (s)",y="Force (um/s)",color="")
 plt1
-ggsave(here::here("plots/force_profiles_around_anaphase.eps"),device=cairo_ps,width=4.5,height=4.5)
+ggsave(here::here("plots/force_profiles_around_anaphase.eps"), width=4.5,height=4.5)
 
 plt2 <- forces_df %>% mutate(is_ana=factor(if_else(`K-fibre (Ana)`>0,"Ana","Meta"),levels=c("Meta","Ana"))) %>% 
   tidyr::gather(key=force,value=value,
@@ -119,13 +119,13 @@ plt2 <- forces_df %>% mutate(is_ana=factor(if_else(`K-fibre (Ana)`>0,"Ana","Meta
   scale_fill_manual(values=RColorBrewer::brewer.pal(n=4,"PiYG"))
 
 plt1 | plt2
-ggsave(here::here("plots/force_profiles_around_anaphase_and_barchart.eps"),device=cairo_ps,width=4.5,height=4.5)
+ggsave(here::here("plots/force_profiles_around_anaphase_and_barchart.eps"), width=4.5,height=4.5)
 
 #######
 #maturation in metaphase
 
 
-simple_positions_by_frame_treatment_df <- Data_2s %>%
+simple_positions_by_frame_df <- Data_2s %>%
   add_kittracking_column() %>%
   full_join(start_of_anaphase_df,by="kittracking_file_str") %>%
   mutate(Frames_since_start = Frame - ana_start%/%dt) %>%
@@ -136,11 +136,10 @@ simple_positions_by_frame_treatment_df <- Data_2s %>%
             Position_2 = first(Position_2),
             Position_3 = first(Position_3)) %>%
   group_by(kittracking_file_str) %>%
-  filter(length(unique(SisterPairID))>min_num_sisters) %>%
-  mutate(filename=kittracking_file_str) %>% add_treatment_column()
+  filter(length(unique(SisterPairID))>min_num_sisters)
 
 #plate width plot
-plate_width_df <- simple_positions_by_frame_treatment_df %>%
+plate_width_df <- simple_positions_by_frame_df %>%
   filter(Frames_since_start<=0) %>%
   group_by(kittracking_file_str,Frames_since_start) %>%
   summarise(plate_width=mad(Position_1,na.rm=T)) %>%
@@ -152,9 +151,9 @@ h1 <- plate_width_df %>%
   geom_ribbon(aes(ymin=lb,ymax=ub),color="grey",alpha=0.6) + theme_bw() +
   labs(x="Time (s)",y="Plate width (um)")
 h1
-# ggsave(here::here("plots/metaphase_plate_width_over_time_2s_data.eps"),device=cairo_ps,width=6,height=4)
+# ggsave(here::here("plots/metaphase_plate_width_over_time_2s_data.eps"), width=6,height=4)
 
-twist_df <- complex_positions_by_frame_treatment_df %>%   
+twist_df <- complex_positions_by_frame_df %>%   
   group_by(SisterPairID,kittracking_file_str,Frames_since_start) %>%
   summarise(cos_phi = compute_angle_phi(Position_1,Position_2,Position_3),
             twist = acos(abs(cos_phi))/pi*180)
@@ -170,9 +169,9 @@ j1 <- twist_df %>%
   theme_bw() +
   labs(x="Time (s)",
        y="Twist (degrees)")
-# ggsave(here::here("plots/twist_over_time_2s_data.eps"),device=cairo_ps,width=6,height=4)
+# ggsave(here::here("plots/twist_over_time_2s_data.eps"), width=6,height=4)
 
-kk_dist_df <- complex_positions_by_frame_treatment_df %>%   
+kk_dist_df <- complex_positions_by_frame_df %>%   
   group_by(SisterPairID,kittracking_file_str,Frames_since_start) %>%
   summarise(kk_dist = sqrt(diff(Position_1)^2+diff(Position_2)^2+diff(Position_3)^2))
 
@@ -188,9 +187,9 @@ k1 <- kk_dist_df %>%
   theme_bw() +
   labs(x="Time (s)",
        y="Intersister distance (um)")
-# ggsave(here::here("plots/kk_dist_over_time_2s_data.eps"),device=cairo_ps,width=6,height=4)
+# ggsave(here::here("plots/kk_dist_over_time_2s_data.eps"), width=6,height=4)
 
 h1 | j1 | k1
-ggsave(here::here("plots/maturation_over_time_2s_data.eps"),device=cairo_ps,width=6,height=4)
+ggsave(here::here("plots/maturation_over_time_2s_data.eps"), width=6,height=4)
 
 } 

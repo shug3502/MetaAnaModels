@@ -63,7 +63,7 @@ h2 <- h1 +
   labs(x="Radius in metaphase plate (um)",y="Standard deviation of parameter")
 
 individual_plt / shared_plt / h2 + plot_layout(heights=c(1,1,1))
-ggsave(here::here("plots/comp_biol_fig5.eps"),device=cairo_ps,width=210,height=297,units="mm")
+ggsave(here::here("plots/comp_biol_fig5.eps"),width=210,height=297,units="mm")
 
 #Assuming a normal distribution for within cell spread, evaluate probability that between cell spread comes from this distribution
 a %>% ungroup() %>% filter(abs(within_cell_spread)>0) %>% 

@@ -120,6 +120,6 @@ plt3 <- ggplot(framewise_speed_df,aes(av_radius,speed_3d)) +
        title="3D framewise speed in\nanaphase does not show\nsame spatial effect")
 
 plt1 | plt2 | plt3 
-ggsave(here::here("plots/anaphase_time_and_speed_versus_radius.eps"),device=cairo_ps,width=210,height=150,units="mm")
+ggsave(here::here("plots/anaphase_time_and_speed_versus_radius.eps"), width=210,height=150,units="mm")
 }
 

@@ -15,9 +15,12 @@ library(tidyr)
 rstan::rstan_options(auto_write = TRUE) #tries to avoid recompiling stan code
 options(mc.cores = parallel::detectCores()) #uses as many cores as you have
 source(here::here('R/helper_fns.R'))
+source(here::here('R/fit_anaphase_changept_model.R'))
+source(here::here('R/fit_anaphase_reversals_model.R'))
 source(here::here('R/make_tracking_figure.R'))
 source(here::here('R/make_population_params_and_heterogeneity_figure.R'))
 source(here::here('R/make_anaphase_times_and_speed_figure.R'))
+source(here::here('R/make_force_profile_and_maturation_figure.R'))
 source(here::here('R/generate_figures_based_on_states_and_switching.R'))
 source(here::here('R/switching_analysis_helper_fns.R'))
 source(here::here('R/hawkes_process_analysis.R'))

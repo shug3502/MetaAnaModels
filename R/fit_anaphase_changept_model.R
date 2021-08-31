@@ -92,7 +92,7 @@ plot_anaphase_changept_results <- function(jobset_str,changept_estimate,Data,dt,
     theme(axis.text.x = element_text(angle=90))
   print(p1+p2)
   ggsave(stringr::str_replace(jobset_str,".csv",
-                              paste("_anaphase_results_",identifier,".eps",sep="")),device=cairo_ps)
+                              paste("_anaphase_results_",identifier,".eps",sep="")))
   if (show_mcmc_diagnostics){
     #plots for mcmc diagnostics
     pars_to_plot = paste(c("tau","alpha","beta","a","t_ana"),"[",rep(1:nTracks,1,each=5),"]",sep="")

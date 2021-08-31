@@ -1,6 +1,7 @@
 src/stan_files/*.rds
 fits/*.rds
-plots/
+plots/*.eps
+plots/*.pdf
 data/*/*.eps
 .Rproj.user
 *.Rproj
