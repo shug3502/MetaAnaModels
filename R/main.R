@@ -37,20 +37,6 @@ K_list <- rep(Inf,length(jobset_str_list))
 nJobsets <- length(jobset_str_list)
 stopifnot(nJobsets>0)
 
-#jobset_str <- here::here("data/OS_LLSM_200818_MC191_Untreated_2.04933s_per_frame//kittracking001-kitjobset_200825_DonaldDuck_auto_v125-OS_LLSM_200818_MC191_Untreated_capture10_flowdec_deconvolved.ome.csv")
-#data_single_pair <- process_jobset(jobset_str,K=Inf,max_missing=0.25) %>%
-#  filter(!is.na(SisterID)) #omit unpaired KTs
-#g <- ggplot(data_single_pair, aes(x=Time, y=Position_1,color=factor(SisterID))) +
-#  geom_line() +
-#  facet_wrap(.~SisterPairID) +
-#  theme_bw() +
-#  theme(legend.position = "None",
-#        strip.text.x = element_text(size = 8),
-#        axis.text.x = element_text(angle=90)) +
-#  labs(x="Time (s)",y="Position (um)")
-#g
-#ggsave(here::here("plots/200818_untreated_capture10_all_pairs.eps"),width=7,height=7)
-
 #for (i in seq_along(jobset_str_list)){
 for (i in sample.int(nJobsets,size=nJobsets,replace=FALSE)){ #go through jobsets in random order
   #fit changepoint model and hierarchical model

@@ -1,8 +1,3 @@
-  library(bayesplot)
-  library(tidybayes)
-  library(ggplot2)
-  library(patchwork)
-
 fit_anaphase_reversals_model <- function(jobset_str, t_ana_df, K=Inf,
                                         identifier = 'anaphase_reversals_v111',
                                         run_analysis = TRUE,
@@ -23,6 +18,19 @@ fit_anaphase_reversals_model <- function(jobset_str, t_ana_df, K=Inf,
 	filter(!is.na(SisterID))
   if (is.infinite(K)) { K = max(Data$Frame) } #find final frame and use this if defaulting to all the data
   if (is.null(dt)) { dt=Data$Time %>% unique() %>% diff() %>% min() }
+
+  #model for anaphase can have problems if data only contains metaphase so ensure chromatids for each pair separate
+  #use a cut off on the 1D kk distance at the last tracked frame to do this
+  has_separated_df <- Data %>%
+    group_by(SisterPairID,Frame) %>%
+    arrange(SisterID,SisterPairID,Frame) %>%
+    summarise(kk_dist=-diff(Position_1)) %>%                
+    group_by(SisterPairID) %>% 
+    summarise(kk_dist_last = last(kk_dist[!is.na(kk_dist)]), 
+              separated = kk_dist_last>2.0) #cut off of 2um  
+  Data <- Data %>% inner_join(has_separated_df %>% ungroup %>% filter(separated),
+                              by="SisterPairID")
+
   pairIDs <- unique(Data$SisterPairID)
   y = prepare_for_stan_format(Data)
   y_missing = purrr::map(y, is.na) %>% purrr::map(function(x) x[,1] | x[,2])

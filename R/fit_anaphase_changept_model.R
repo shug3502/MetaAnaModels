@@ -1,4 +1,4 @@
-fit_anaphase_changept_model <- function(jobset_str, K=160,
+fit_anaphase_changept_model <- function(jobset_str, K=Inf,
                                         identifier = 'changept_multiple_v111',
                                         run_analysis = TRUE,
 					fits_folder_str=here::here('fits'),
@@ -15,6 +15,19 @@ fit_anaphase_changept_model <- function(jobset_str, K=160,
   stopifnot(nrow(Data)>0) # ensure there is some data to fit the model to for this job
   if (is.infinite(K)) { K = max(Data$Frame) } #find final frame and use this if defaulting to all the data
   if (is.null(dt)){ dt = Data$Time %>% unique() %>% diff() %>% min() }
+
+  #model for anaphase can have problems if data only contains metaphase so ensure chromatids for each pair separate
+  #use a cut off on the 1D kk distance at the last tracked frame to do this
+  has_separated_df <- Data %>% 
+    group_by(SisterPairID,Frame) %>% 
+    arrange(SisterID,SisterPairID,Frame) %>% 
+    summarise(kk_dist=-diff(Position_1)) %>% 
+    group_by(SisterPairID) %>% 
+    summarise(kk_dist_last = last(kk_dist[!is.na(kk_dist)]),
+              separated = kk_dist_last>2.0) #cut off of 2um
+  Data <- Data %>% inner_join(has_separated_df %>% ungroup %>% filter(separated),
+			      by="SisterPairID") 
+
   pairIDs <- unique(Data$SisterPairID)
   nTracks = length(pairIDs)
   y = prepare_for_stan_format(Data)
