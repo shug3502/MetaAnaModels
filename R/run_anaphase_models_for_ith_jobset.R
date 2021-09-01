@@ -20,9 +20,6 @@ changept_out <- fit_anaphase_changept_model(jobset_str_list[i], K=K_list[i],
                                             run_analysis = run_changept,
                                             fits_folder_str = fits_folder_str, dt=dt,
                                             plot_opt=0,num_iter=num_iter)
-#t_ana_input_df <- changept_out %>%
-#  spread_draws(t_ana[track]) %>% #spread draws is slow and uses lots of memory I think
-#  summarise(t_ana=median(t_ana))
 
   t_ana_input_df <- as.data.frame(changept_out, pars = "t_ana") %>% 
     tidyr::gather(pair,t_ana) %>% 

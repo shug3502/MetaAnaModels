@@ -39,7 +39,11 @@ stopifnot(nJobsets>0)
 
 #for (i in seq_along(jobset_str_list)){
 for (i in sample.int(nJobsets,size=nJobsets,replace=FALSE)){ #go through jobsets in random order
+  output_exists <- (file.exists(file.path(fits_folder_str,paste('anaphase_reversals_hierarchical_',
+                  paste(job_id %>% stringr::str_replace_all("\\.",""),identifier,sep=""),
+                  '.rds',sep='')))) #no need to run again if output already exists
+  run <- (run_analysis & !output_exists)
   #fit changepoint model and hierarchical model
-  out <- run_anaphase_models_for_ith_jobset(i,jobset_str_list,K_list,here::here("fits"),identifier,run_analysis,use_parallel,run_changept_anyway,dt,num_iter)
+  out <- run_anaphase_models_for_ith_jobset(i,jobset_str_list,K_list,here::here("fits"),identifier,run,use_parallel,run_changept_anyway,dt,num_iter)
 }  
 

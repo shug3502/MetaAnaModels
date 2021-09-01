@@ -62,7 +62,6 @@ fit_anaphase_reversals_model <- function(jobset_str, t_ana_df, K=Inf,
                              p_coh=0.9+0.02*rnorm(nTracks), p_icoh=0.9+0.02*rnorm(nTracks),
                              v_ana = rep(0.04,nTracks), t_ana = t_ana_df[["t_ana"]] + 3*dt*rnorm(nTracks)
     )
-    #stan_file = here::here('src/stan_files/anaphase_reversals_hierarchical.stan')
     m <- stan_model(stan_file) #slightly different way to call a stan model, this compiles the model and the next line does the sampling
     estimate <- rstan::sampling(m,
                      data=stan_input,
@@ -86,10 +85,10 @@ fit_anaphase_reversals_model <- function(jobset_str, t_ana_df, K=Inf,
                      chains = 4,
                      warmup = num_iter,
                      iter = 2*num_iter,
-                     pars = c("eta","f","auxStates","P","p_ana","aux"),
+                     pars = c("eta","f","auxStates","P","p_ana","aux","state_probs","conditional_state_probs","P_col"),
                      include=FALSE, #avoid saving the params listed above
                      control=list(adapt_delta=0.95,
-                                  max_treedepth=12))
+                                  max_treedepth=15))
   }  
   } else {
     #just load from previous save
