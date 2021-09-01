@@ -41,6 +41,6 @@ cat("Done ...\n")
 error = function (err) { print(err)
 cat("Continuing but analysis not done for that job ... \n")
 })
-return(out)
+return(0)
 }
 

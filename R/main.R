@@ -46,6 +46,6 @@ for (i in sample.int(nJobsets,size=nJobsets,replace=FALSE)){ #go through jobsets
                   '.rds',sep='')))) #no need to run again if output already exists
   run <- (run_analysis & !output_exists)
   #fit changepoint model and hierarchical model
-  out <- run_anaphase_models_for_ith_jobset(i,jobset_str_list,K_list,fits_folder_str,identifier,run,use_parallel,run_changept_anyway,dt,num_iter)
+  run_anaphase_models_for_ith_jobset(i,jobset_str_list,K_list,fits_folder_str,identifier,run,use_parallel,run_changept_anyway,dt,num_iter)
 }  
 
