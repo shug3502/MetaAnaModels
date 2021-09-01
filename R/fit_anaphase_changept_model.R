@@ -30,6 +30,7 @@ fit_anaphase_changept_model <- function(jobset_str, K=Inf,
 
   pairIDs <- unique(Data$SisterPairID)
   nTracks = length(pairIDs)
+  stopifnot(nTracks>10) #ensure at least 10 pairs to fit to
   y = prepare_for_stan_format(Data)
   y_missing = map(y, is.na) %>% map(function(x) x[,1] | x[,2])
   for (i in 1:length(y)) {

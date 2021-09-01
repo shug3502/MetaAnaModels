@@ -32,6 +32,8 @@ fit_anaphase_reversals_model <- function(jobset_str, t_ana_df, K=Inf,
                               by="SisterPairID")
 
   pairIDs <- unique(Data$SisterPairID)
+  nTracks <- length(pairIDs)
+  stopifnot(nTracks>10) #ensure at least 10 pairs to fit to
   y = prepare_for_stan_format(Data)
   y_missing = purrr::map(y, is.na) %>% purrr::map(function(x) x[,1] | x[,2])
   for (i in 1:length(y)) {
@@ -41,7 +43,6 @@ fit_anaphase_reversals_model <- function(jobset_str, t_ana_df, K=Inf,
   start_end <- purrr::map_df(y_missing,get_start_end_of_nonmissing_data,.id="traj_index") %>%
     mutate(SisterPairID=pairIDs[as.integer(traj_index)]) #use this info to only fit to the existing tracks
 
-  nTracks <- length(pairIDs)
   if (run_analysis){
     cos_phi <- purrr::map(pairIDs,function(x) get_cos_phi(Data,x))
     for (ii in seq_along(cos_phi)){
