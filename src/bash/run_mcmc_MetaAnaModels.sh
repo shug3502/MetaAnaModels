@@ -8,4 +8,5 @@
 pwd; hostname; date
 module load R
 identifier="${USER}_MetaAnaModels_2s_v421"
+echo "Rscript R/main ${identifier} ${path_to_data}"
 Rscript R/main.R "${identifier}" "${path_to_data}"
