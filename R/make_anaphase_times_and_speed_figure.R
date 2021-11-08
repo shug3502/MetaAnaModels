@@ -1,4 +1,4 @@
-make_anaphase_times_and_speed_figure <- function(jobset_str_list,draws){
+make_anaphase_times_and_speed_figure <- function(jobset_str_list,draws,min_num_sisters=10,nframes_early=300){
 
 Data_2s <- purrr::map(jobset_str_list,
                       function(x) process_jobset(x,max_missing=0.25,K=Inf,

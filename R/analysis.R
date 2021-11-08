@@ -20,7 +20,8 @@ source(here::here('R/fit_anaphase_reversals_model.R'))
 source(here::here('R/make_tracking_figure.R'))
 source(here::here('R/make_population_params_and_heterogeneity_figure.R'))
 source(here::here('R/make_anaphase_times_and_speed_figure.R'))
-source(here::here('R/make_force_profile_and_maturation_figure.R'))
+source(here::here('R/ana_spatial_analysis.R'))
+source(here::here('R/make_force_profiles_and_maturation_figure.R'))
 source(here::here('R/generate_figures_based_on_states_and_switching.R'))
 source(here::here('R/switching_analysis_helper_fns.R'))
 source(here::here('R/hawkes_process_analysis.R'))
@@ -32,8 +33,8 @@ source(here::here('R/extract_hidden_states.R'))
 #options etc
 dt=2.05
 fits_folder_str <- "fits"
-identifier = args[1]
-path_to_folder = args[2]
+identifier = "jonathanharrison_MetaAnaModels_2s_v411" #args[1]
+path_to_folder = "data" #args[2]
 
 jobset_str_list <- list.files(path = path_to_folder,pattern="\\.csv$",
                               full.names=TRUE,recursive=TRUE)
@@ -64,7 +65,7 @@ make_force_profile_and_maturation_figure(jobset_str_list,draws,identifier,
 
 #############################
 #Figure 7: anaphase times and speeds
-make_anaphase_times_and_speed_figure(jobset_str_list,draws)
+make_anaphase_times_and_speed_figure(jobset_str_list,draws,min_num_sisters=10,nframes_early=300)
 
 # #############################
 # #Figure 8: Directional switching
@@ -83,9 +84,8 @@ make_anaphase_times_and_speed_figure(jobset_str_list,draws)
 #                                                      nStates=6,niter=200)
 # 
 # #############################
-# #Figure 11: coordination of anaphase onset
-# #similarly
-# make_coordination_of_anaphase_onset_figure(data_single_pair,estimate,dt=dt)
+ #Figure 11: coordination of anaphase onset
+make_coordination_of_anaphase_onset_figure(identifier,jobset_str_list,dt=dt)
 
 for (i in seq_along(jobset_str_list)){
   #extract hidden states
@@ -116,11 +116,6 @@ for (i in seq_along(jobset_str_list)){
     #TODO: similarly
     make_local_coordination_agreement_figure(jobset_str_list[i],estimate,dt=dt,
                                              nStates=6,niter=200)
-    
-    #############################
-    #Figure 11: coordination of anaphase onset
-    #similarly
-    make_coordination_of_anaphase_onset_figure(jobset_str_list[i],estimate,dt=dt)
     
   } else {
     cat('Files from sampling do not exist. Skipping this cell.\n')

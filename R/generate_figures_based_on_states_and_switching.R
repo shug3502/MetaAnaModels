@@ -1,3 +1,4 @@
+#TODO: loop over jobset_strs in a jobset_str_list. Output some data frames with results that can be combined and plotted together?
 get_all_interesting_stats <- function(Data, draws, ana_margin=60, 
                                       window_size=20,dt=2.05, 
                                       t_ana_quantile=0.5,

@@ -44,25 +44,50 @@ get_states_df <- function(mcmc_iter,sigma_sim,pairIDs,K){
 }
 get_states_df_for_cell <- function(ktf,Data_2s,num_iter){
   Data <- Data_2s %>% filter(kittracking_file_str==ktf)
-  jobset_str <- Data$filename
-  pairIDs <- Data %>% pull(SisterPairID) %>% unique()
+  jobset_str <- Data$filename %>% unique()
   K <- max(Data$Frame)
-  sigma_sim <- extract_hidden_states(NULL,jobset_str,fits_folder_str=fits_folder_str,identifier=identifier) #load sigma_sim
-  states_df <- purrr::map_df(1:num_iter,function(x) get_states_df(x,sigma_sim,pairIDs,K),
+
+#now only fit trajectories of pairs that have properly separated, ie. by more than 2um 
+  has_separated_df <- Data %>%
+    group_by(SisterPairID,Frame) %>%
+    arrange(SisterID,SisterPairID,Frame) %>%
+    summarise(kk_dist=-diff(Position_1)) %>%
+    group_by(SisterPairID) %>%
+    summarise(kk_dist_last = last(kk_dist[!is.na(kk_dist)]),
+              separated = kk_dist_last>2.0) #cut off of 2um
+  pairIDs <- has_separated_df %>% 
+    filter(separated) %>%
+    pull(SisterPairID) %>% 
+    unique()
+
+  job_id = stringr::str_split(jobset_str,"kittracking")[[1]][2]
+  path_to_fit <- file.path(fits_folder_str,paste('anaphase_reversals_hierarchical_',paste(job_id %>% stringr::str_replace_all("\\.",""),identifier,sep=""),'.rds',sep=''))
+  if (file.exists(path_to_fit)){
+    sigma_sim <- extract_hidden_states(NULL,jobset_str,fits_folder_str=fits_folder_str,identifier=identifier) #load sigma_sim
+    if (dim(sigma_sim[[1]])[1] > length(pairIDs)){ 
+      #exclude non-separated pairs even if they have been fitted
+      b <- has_separated_df %>% pull(separated)
+      sigma_sim <- purrr::map(sigma_sim, function(x) x[b,]) #exclude rows of pairs that have not separated
+    }
+    states_df <- purrr::map_df(1:num_iter,function(x) get_states_df(x,sigma_sim,pairIDs,K),
                            .id="iter")
+  } else {
+    states_df <- data.frame()
+  }
+  return(states_df)
 }
 
 all_states_df <- purrr::map_df(ktf_all,function(x) get_states_df_for_cell(x,Data_2s,num_iter),
                                .id="cell") %>%
   mutate(kittracking_file_str=ktf_all[as.integer(cell)])
-  
+
 forces_df <- all_states_df %>%
   inner_join(ana_times_df,by=c("kittracking_file_str","SisterPairID")) %>%
   mutate(Frames_since_start = Frame - t_ana%/%dt) %>%
   dplyr::select(-t_ana,-cell.x,-cell.y,-Frame,-filename) %>%
   inner_join(complex_positions_by_frame_df,
              by=c("kittracking_file_str","SisterPairID","Frames_since_start")) %>%
-  inner_join(draws %>% dplyr::select(-xi) %>% 
+  inner_join(draws %>% dplyr::select(-xi,-state,-timept) %>% 
                tidyr::spread(key=param,value=theta) %>% 
                add_kittracking_column(),by=c("kittracking_file_str","SisterPairID")) %>% 
   group_by(iter,Frames_since_start,kittracking_file_str,SisterPairID) %>%
@@ -124,9 +149,16 @@ ggsave(here::here("plots/force_profiles_around_anaphase_and_barchart.eps"), widt
 #######
 #maturation in metaphase
 
+  start_of_anaphase_df <- draws %>%
+    mutate(t_ana = if_else(param=="t_ana",theta,NA_real_)) %>%
+    group_by(cell,filename) %>%
+    summarise(ana_start = quantile(t_ana,probs=0.5,na.rm=TRUE)) %>% #find time of first separating sister for start of anaphase
+    ungroup() %>%
+    mutate(cell=as.integer(cell),
+           kittracking_file_str = filename %>% stringr::str_split('/') %>% purrr::map(last)) %>%
+    tidyr::unnest() 
 
 simple_positions_by_frame_df <- Data_2s %>%
-  add_kittracking_column() %>%
   full_join(start_of_anaphase_df,by="kittracking_file_str") %>%
   mutate(Frames_since_start = Frame - ana_start%/%dt) %>%
   filter(Frames_since_start < nframes_early) %>%
