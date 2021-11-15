@@ -12,23 +12,23 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
   
   t_ana_early <- rstan::extract(estimate,pars="t_ana")$t_ana %>% quantile(.,0.025)
   K_meta <- floor(t_ana_early/dt)
-  # xi_sampled <- array(0,dim=c(nTracks,K,nStates))
-  # pp <- array(dim=c(nTracks,K,nStates))
-  # ff <- array(dim=c(nTracks,K,nStates))
-  # ss <- array(dim=c(nTracks,K,nStates))
-  # for (iPair in seq_len(nTracks)){
-  #   for (frame in seq_len(K)){
-  #     for (state in seq_len(nStates)) {
-  #       for (mcmc_iter in seq_len(niter)) {
-  #         xi_sampled[iPair,frame,state] <- xi_sampled[iPair,frame,state] + (sigma_sim[[mcmc_iter]][iPair,frame]==state)
-  #       }
-  #       pp[iPair,frame,state] <- pairIDs[iPair]
-  #       ff[iPair,frame,state] <- frame
-  #       ss[iPair,frame,state] <- state
-  #     }
-  #   }
-  # }
-  # xi_sampled <- xi_sampled/niter
+  xi_sampled <- array(0,dim=c(nTracks,K,nStates))
+  pp <- array(dim=c(nTracks,K,nStates))
+  ff <- array(dim=c(nTracks,K,nStates))
+  ss <- array(dim=c(nTracks,K,nStates))
+  for (iPair in seq_len(nTracks)){
+    for (frame in seq_len(K)){
+      for (state in seq_len(nStates)) {
+        for (mcmc_iter in seq_len(niter)) {
+          xi_sampled[iPair,frame,state] <- xi_sampled[iPair,frame,state] + (sigma_sim[[mcmc_iter]][iPair,frame]==state)
+        }
+        pp[iPair,frame,state] <- pairIDs[iPair]
+        ff[iPair,frame,state] <- frame
+        ss[iPair,frame,state] <- state
+      }
+    }
+  }
+  xi_sampled <- xi_sampled/niter
   # df <- tibble(xi=as.numeric(xi_sampled),
   #              SisterPairID=as.integer(pp),
   #              frame=as.integer(ff),state=as.integer(ss))
@@ -50,9 +50,9 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
   #   geom_line() + theme_bw() + 
   #   facet_wrap(.~ SisterPairID)
   
-  df2 <- tibble(xi=as.numeric(xi_sampled[,,2]-xi_sampled[,,3]),
-                SisterPairID=as.integer(pp[,,2]),
-                frame=as.integer(ff[,,2]))
+#  df2 <- tibble(xi=as.numeric(xi_sampled[,,2]-xi_sampled[,,3]),
+#                SisterPairID=as.integer(pp[,,2]),
+#                frame=as.integer(ff[,,2]))
   # 
   # intersister_dist_3d_df %>% 
   #   inner_join(intersister_dist_3d_mean_df,by="SisterPairID") %>%
@@ -97,7 +97,7 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
     inner_join(intersister_dist_3d_mean_df,by="SisterPairID") %>%
     mutate(intersister_dist_3d=intersister_dist_3d-intersister_dist_3d_mean) %>% #subtract mean
     dplyr::select(-intersister_dist_3d_mean) %>%
-    inner_join(df2 %>% mutate(Frame=frame)) %>% 
+ #   inner_join(df2 %>% mutate(Frame=frame)) %>% 
     filter(Frame<240) %>%
     # tidyr::gather(stat,value,-SisterPairID,-frame,-Frame) %>%
     inner_join(data_single_pair %>% 
@@ -334,9 +334,9 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
                color="red",
                linetype="dashed") + 
     theme_bw() + 
-    labs(x="Average agreement in states\nbetween a KT and its neighbours",
+    labs(x="Average alignment in states\nbetween a KT and its neighbours",
          y="Number of simulations")
-  ggsave(here::here("plots/simulated_agreement_vs_observed_agreement.eps"),
+  ggsave(here::here("plots/simulated_alignment_vs_observed_alignment.eps"),
          width=210,height=140,units="mm")
   
   pdf(here::here("plots/positions_of_kt_pairs_in_plate.pdf"))
@@ -355,7 +355,7 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
   
   pdf(here::here("plots/av_agreement_data_time_series.pdf"))
   plot(seq(from=0,to=(length(av_agreement)-1)*dt,by=dt),
-       av_agreement,xlab="Time (s)",ylab=expression(paste("Agreement ","J"^"t")))
+       av_agreement,xlab="Time (s)",ylab=expression(paste("Alignment ","J"^"t")))
   lines(seq(from=0,to=(length(av_agreement)-1)*dt,by=dt),
         av_agreement)
   dev.off()
@@ -373,5 +373,5 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
   #   out[iSim] <- mean(neighbour_state_agreement)
   # }
   # hist(out)
-  
+  return(list(mean(av_agreement),av_agreement,ensemble))
 }
