@@ -2,6 +2,7 @@ make_coordination_of_anaphase_onset_figure <- function(identifier,jobset_str_lis
 empirical_quantile_of_obs_vs_sim <- rep(NA,length(jobset_str_list))
 #av_diff_from_hist <- rep(0,30)
 nPairs_at_ana_vec <- rep(NA,length(jobset_str_list))
+nPts_at_ana <- rep(NA,length(jobset_str_list))
 pdist_t_ana_df <- data.frame()
   for (i in seq_along(jobset_str_list)){
 print(i)
@@ -15,6 +16,7 @@ print(jobset_str_list[i])
       estimate <- readRDS(file=path_to_est)
       lst <- make_coordination_of_anaphase_onset_figure_single_cell(jobset_str_list[i],estimate,edited_job_id,dt=dt)
       empirical_quantile_of_obs_vs_sim[i] <- lst[[1]]
+      nPts_at_ana[i] <- lst[[2]]
 #      av_diff_from_hist <- av_diff_from_hist + lst[[2]]
 #      pdist_t_ana_df <- rbind(pdist_t_ana_df,lst[[2]])
 #      nPairs_at_ana_vec[i] <- lst[[3]]
@@ -33,6 +35,12 @@ p1 <- ggplot(data=tibble(dist=empirical_quantile_of_obs_vs_sim),
 #p1 | p2
 p1
 ggsave(here::here("plots/av_distance_between_pairs_at_anaphase_onset_quantile_histogram.eps"),width=6,height=4)
+p2 <- ggplot(data=tibble(quantile=empirical_quantile_of_obs_vs_sim,
+			 nPts=nPts_at_ana),
+	     aes(nPts,quantile)) + 
+	geom_point() + theme_bw()
+p2
+ggsave(here::here("plots/number_of_points_in_square_vs_quantile.eps"),width=6,height=4)
 
 #plt <- ggplot(pdist_t_ana_df,aes(dist,t_ana_diff)) + 
 #geom_point(size=0.5) + 
@@ -47,6 +55,7 @@ ggsave(here::here("plots/av_distance_between_pairs_at_anaphase_onset_quantile_hi
 #geom_bar(stat="identity") + 
 #theme_bw()
 #ggsave(here::here("plots/av_distance_between_pairs_distance_between_histograms.eps"),width=6,height=4)
+return(empirical_quantile_of_obs_vs_sim)
 }
 
 #my_kernel <- function(delt,dely,delz,lengthscale,timescale){
@@ -190,5 +199,5 @@ empirical_quantile <- ana_spatial_analysis(positions_at_anaphase_onset_df,job_id
 #return(list(sim_ecdf(av_dist_between_successive_pairs),combhist$counts,nPairs_at_ana))
 #return(list(sim_ecdf(av_dist_between_successive_pairs),pdist_t_ana_df,nPairs_at_ana))
 #return(list(empirical_quantile,pdist_t_ana_df,nPairs_at_ana))
-return(list(empirical_quantile))
+return(empirical_quantile)
 }

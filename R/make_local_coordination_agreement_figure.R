@@ -1,15 +1,51 @@
-make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05,
+make_local_coordination_agreement_figure <- function(jobset_str_list,identifier,dt=2.05,
+                                                     nStates=6,niter=200){
+  local_coordination <- rep(NA,length(jobset_str_list))
+  for (i in seq_along(jobset_str_list)){
+    jobset_str <- jobset_str_list[i]
+    job_id = stringr::str_split(jobset_str,"kittracking")[[1]][2]
+    edited_job_id = paste(job_id %>%
+                       stringr::str_replace_all("\\.",""),identifier,sep="")
+    path_to_est <- file.path(fits_folder_str,paste('anaphase_reversals_hierarchical_',
+                                                 edited_job_id,'.rds',sep=''))
+    if (file.exists(path_to_est)){
+      estimate <- readRDS(file=path_to_est)
+      local_coordination[i] <- make_local_coordination_agreement_figure_single_cell(jobset_str,estimate,job_id,dt=dt,
+                                                     nStates=nStates,niter=niter)
+    }
+  }
+p1 <- ggplot(data=tibble(qq=local_coordination),
+       aes(qq)) +
+  geom_histogram() +
+  theme_bw() +
+  labs(x="Quantile in comparison between data and simulations",
+       y="Number of cells")
+p1
+ggsave(here::here("plots/agreement_data_vs_simulations_comparison.eps"),width=6,height=4)
+return(local_coordination)
+}
+
+make_local_coordination_agreement_figure_single_cell <- function(jobset_str,estimate,job_id,dt=2.05,
                                                      nStates=6,niter=200){
 
-  data_single_pair <- process_jobset(jobset_str,K=Inf,max_missing=0.25) %>%
+  Data <- process_jobset(jobset_str,K=Inf,max_missing=0.25) %>%
     filter(!is.na(SisterID)) #omit unpaired KTs
   
   sigma_sim <- extract_hidden_states(estimate)
 
-  pairIDs <- unique(data_single_pair$SisterPairID)
+#model was only to fit where sisters had separated by more than 2um
+  has_separated_df <- Data %>%
+    group_by(SisterPairID,Frame) %>%
+    arrange(SisterID,SisterPairID,Frame) %>%
+    summarise(kk_dist=-diff(Position_1)) %>%
+    group_by(SisterPairID) %>%
+    summarise(kk_dist_last = last(kk_dist[!is.na(kk_dist)]),
+              separated = kk_dist_last>2.0) #cut off of 2um
+  pairIDs <- has_separated_df %>% filter(separated) %>% pull(SisterPairID)
+#  pairIDs <- unique(Data$SisterPairID)
   nTracks <- length(pairIDs)
-  K <- max(data_single_pair$Frame)
-  
+  K <- max(Data$Frame)
+cat(paste0("Number of tracks: ",nTracks," Size of MCMC output (single iteration): ",dim(sigma_sim[[1]]),"\n"))  
   t_ana_early <- rstan::extract(estimate,pars="t_ana")$t_ana %>% quantile(.,0.025)
   K_meta <- floor(t_ana_early/dt)
   xi_sampled <- array(0,dim=c(nTracks,K,nStates))
@@ -29,15 +65,8 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
     }
   }
   xi_sampled <- xi_sampled/niter
-  # df <- tibble(xi=as.numeric(xi_sampled),
-  #              SisterPairID=as.integer(pp),
-  #              frame=as.integer(ff),state=as.integer(ss))
-  # df %>% ggplot(aes(frame,xi,color=factor(state))) + geom_step() +
-  #   facet_wrap(.~SisterPairID,labeller = label_both) + theme_bw()
-  # 
-  ################
 
-  intersister_dist_3d_df <- data_single_pair %>%
+  intersister_dist_3d_df <- Data %>%
     group_by(SisterPairID,Frame) %>%
     summarise(intersister_dist_3d = sqrt(diff(Position_1)^2+diff(Position_2)^2+diff(Position_3)^2))
 
@@ -45,50 +74,6 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
     group_by(SisterPairID) %>%
     summarise(intersister_dist_3d_mean = median(intersister_dist_3d,na.rm=T)) #average in time for each pair
 
-  # ggplot(intersister_dist_3d_df %>% filter(Frame<240),
-  #        aes((Frame-1)*dt,intersister_dist_3d,group=SisterPairID)) + 
-  #   geom_line() + theme_bw() + 
-  #   facet_wrap(.~ SisterPairID)
-  
-#  df2 <- tibble(xi=as.numeric(xi_sampled[,,2]-xi_sampled[,,3]),
-#                SisterPairID=as.integer(pp[,,2]),
-#                frame=as.integer(ff[,,2]))
-  # 
-  # intersister_dist_3d_df %>% 
-  #   inner_join(intersister_dist_3d_mean_df,by="SisterPairID") %>%
-  #   mutate(intersister_dist_3d=intersister_dist_3d-intersister_dist_3d_mean) %>% #subtract mean
-  #   dplyr::select(-intersister_dist_3d_mean) %>%
-  #   inner_join(df2 %>% mutate(Frame=frame)) %>% filter(Frame<240) %>%
-  #   tidyr::gather(stat,value,-SisterPairID,-frame,-Frame) %>%
-  #   ggplot(aes(Frame,value,color=stat)) + 
-  #   geom_line() +
-  #   facet_wrap(.~SisterPairID,labeller = label_both) + theme_bw()
-  
-  # 
-  # library(gganimate)
-  # plt <- data_single_pair %>% group_by(SisterPairID) %>%
-  #   summarise(av_y=median(Position_2,na.rm=T),
-  #             av_z=median(Position_3,na.rm=T)) %>%
-  #   mutate(y=cut(av_y,4),
-  #          z=cut(av_z,4)) %>%
-  #   inner_join(intersister_dist_3d_df %>% 
-  #                inner_join(intersister_dist_3d_mean_df,by="SisterPairID") %>%
-  #                mutate(intersister_dist_3d=intersister_dist_3d-intersister_dist_3d_mean) %>% #subtract mean
-  #                dplyr::select(-intersister_dist_3d_mean) %>%
-  #                inner_join(df2 %>% mutate(Frame=frame)) %>% filter(Frame<240)) %>%
-  #   #tidyr::gather(stat,value,-SisterPairID,-frame,-Frame) %>%
-  #   ggplot(aes(av_y,av_z,color=xi)) + 
-  #   geom_point() +
-  #   theme_bw()
-  # 
-  # anim <- plt + transition_states(Frame,
-  #                                 transition_length = 0.1,
-  #                                 state_length = 1) +
-  #   ggtitle('Frame {frame} of {nframes}')
-  # 
-  # animate(anim,nframes=K)
-  # anim_save(here::here("plots/xi_animation.gif"))
-  
   ############
   #try to use some spatial statistics measures to assess spatial autocorrelation
   library(spdep)
@@ -98,120 +83,26 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
     mutate(intersister_dist_3d=intersister_dist_3d-intersister_dist_3d_mean) %>% #subtract mean
     dplyr::select(-intersister_dist_3d_mean) %>%
  #   inner_join(df2 %>% mutate(Frame=frame)) %>% 
-    filter(Frame<240) %>%
+    filter(Frame<=K_meta) %>%
+    filter(SisterPairID %in% pairIDs) %>% #exclude pairs that have not separated as assessed previously
     # tidyr::gather(stat,value,-SisterPairID,-frame,-Frame) %>%
-    inner_join(data_single_pair %>% 
+    inner_join(Data %>% 
                  group_by(SisterPairID,Frame) %>%
                  summarise(x=mean(Position_1),
                            y=mean(Position_2),
                            z=mean(Position_3)))
   
-  # get_moran_I <- function(frame_num,within_dist=1.5){
-  #   simplified_df <- df %>% filter(Frame==frame_num) %>%
-  #   tidyr::drop_na()
-  # # kk_dist_vec <- simplified_df$intersister_dist_3d
-  # positions <- cbind(simplified_df[['y']], simplified_df[['z']])
-  # pairwise_dist <- dist(positions) %>% as.matrix()
-  # weights <- 1/pairwise_dist
-  # diag(weights) <- 0
-  # 
-  # # ape::Moran.I(simplified_df$xi, weights)
-  # if (length(simplified_df$xi)==0) return(NA)
-  # moran_i <- ape::Moran.I(simplified_df$xi, (pairwise_dist > 0 & (pairwise_dist <= within_dist)))
-  # # ape::Moran.I(simplified_df$xi, (pairwise_dist > 0 & pairwise_dist <= 1.5))
-  # return(moran_i$observed)
-  # }
-  # out <- purrr::map_dbl(1:239,get_moran_I)
-  # plot(out)
-  # 
-  # get_correlogram <- function(frame_num){
-  #   simplified_df <- df %>% filter(Frame==frame_num) %>%
-  #     tidyr::drop_na()
-  #   positions <- cbind(simplified_df[['y']], simplified_df[['z']])
-  #  
-  #   # S_nb <- knn2nb(knearneigh(positions, k=5), row.names=unique(simplified_df$SisterPairID))
-  #   # dsts <- unlist(nbdists(S_nb, positions))
-  #   # max_1nn <- max(dsts)
-  #   max_1nn <- 3
-  #   S_nb <- dnearneigh(positions, d1=0, d2=1*max_1nn, row.names=unique(simplified_df$SisterPairID))
-  #   correl <- sp.correlogram(S_nb, simplified_df$xi,order = 2)
-  #   return(correl$res)
-  # }
-  # correlogram.out <- purrr::map(1:239,get_correlogram) 
-  # purrr::map_dbl(1:2,function(y) mean(purrr::map_dbl(1:239,function(x) correlogram.out[[x]][y])))
-  # plot(out)
-  # 
-  # S_nb <- knn2nb(knearneigh(positions, k=5), row.names=unique(simplified_df$SisterPairID))
-  # plot(positions)
-  # plot(S_nb, positions, add=TRUE, pch=".")
-  # sp.correlogram(S_nb, simplified_df$xi,order = 3)
-  # moran.plot(simplified_df$xi, nb2listw(S_nb),label=F)
-  # 
-  # dsts <- unlist(nbdists(S_nb, positions))
-  # max_1nn <- max(dsts)
-  # S11_nb <- dnearneigh(positions, d1=0, d2=0.75*max_1nn, row.names=unique(simplified_df$SisterPairID))
-  # S12_nb <- dnearneigh(positions, d1=0, d2=1*max_1nn, row.names=unique(simplified_df$SisterPairID))
-  # plot(positions)
-  # plot(S11_nb, positions, add=TRUE, pch=".")
-  # 
-  # plot(positions)
-  # plot(S12_nb, positions, add=TRUE, pch=".")
-  # 
-  # sp.correlogram(S11_nb, simplified_df$xi,order = 3)
-  # moran.plot(simplified_df$xi, nb2listw(S11_nb),label=F)
-  
-  
-  #############
-  
-  pairwise_correlation_KT_pairs <- function(df,pair_i,pair_j){
-    simplified_df_i <- df %>% filter(SisterPairID==pair_i) %>% drop_na()
-    simplified_df_j <- df %>% filter(SisterPairID==pair_j) %>% drop_na()
-    mask <- intersect(simplified_df_i$Frame,simplified_df_j$Frame)
-    xx <- simplified_df_i %>% filter(Frame %in% mask) %>% pull(xi)
-    yy <- simplified_df_j %>% filter(Frame %in% mask) %>% pull(xi)
-    # positions <- cbind(simplified_df[['y']], simplified_df[['z']])
-    cor(xx,yy)
-  }
-  
-  pairwise_dist_between_KT_pairs <- function(df,pair_i,pair_j){
-    av_pos_i <- df %>% filter(SisterPairID==pair_i) %>% 
-      summarise(y=median(y,na.rm=T),
-                z=median(z,na.rm=T))
-    av_pos_j <- df %>% filter(SisterPairID==pair_j) %>% 
-      summarise(y=median(y,na.rm=T),
-                z=median(z,na.rm=T))  
-    sqrt((av_pos_i$y-av_pos_j$y)^2 + (av_pos_i$z-av_pos_j$z)^2)
-  }
-  
-  all_pairs <- expand.grid(i=pairIDs,j=pairIDs)
-  all_cors <- purrr::map2_dbl(all_pairs$i,all_pairs$j,function(x1,y1) pairwise_correlation_KT_pairs(df,x1,y1))
-  all_dists <- purrr::map2_dbl(all_pairs$i,all_pairs$j,function(x2,y2) pairwise_dist_between_KT_pairs(df,x2,y2))
-  ggplot(tibble(dist=all_dists,cors=all_cors),aes(dist,cors)) +
-    geom_point() + geom_smooth() + theme_bw()
-  
-  # av_pos_df <- df %>% group_by(SisterPairID) %>%
-  #   summarise(av_y=median(y,na.rm=T),av_z=median(z,na.rm=T))
-  # df_with_dist_from_ref_pair_df <- av_pos_df %>% 
-  #   mutate(d=sqrt((av_y-last(av_pos_df$av_y))^2+(av_z-last(av_pos_df$av_z))^2)) %>%
-  #   mutate(discrete_d=cut(d,5)) %>%
-  #   inner_join(df)
-  # ggplot(df_with_dist_from_ref_pair_df,
-  #        aes((Frame-1)*dt,xi,color=d,group=SisterPairID)) + 
-  #   geom_line() + 
-  #   geom_line(data=df_with_dist_from_ref_pair_df %>% filter(SisterPairID==last(pairIDs)),
-  #             aes((Frame-1)*dt,xi),color="green") +
-  #   theme_bw() + facet_wrap(.~discrete_d)
-  
-  
   ###########
   #is a KT pair in the same state as its neighbours
   library(Matrix)
   av_agreement <- rep(0,K_meta)
-  all_pairIDs <- df$SisterPairID %>% unique()
+  all_pairIDs <- has_separated_df %>% filter(separated) %>% pull(SisterPairID)
+#  all_pairIDs <- df$SisterPairID %>% unique()
   for (iFrame in seq_len(K_meta)){
     simplified_df <- df %>% filter(Frame==iFrame) %>%
       tidyr::drop_na()
     pairIDs <- unique(simplified_df$SisterPairID)
+#    pairIDs <- pairIDs[pairIDs %in% all_pairIDs] #exclude pair if it has not separated as assessed previously
     positions <- cbind(simplified_df[['y']], simplified_df[['z']])
     S_nb <- knn2nb(knearneigh(positions, k=4), row.names=pairIDs)
     # plot(positions)
@@ -259,7 +150,7 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
   
   nSim <- 100
   ensemble <- rep(NA,nSim)
-  av_acf <- array(NA,dim=c(nSim,51))
+  av_acf <- array(NA,dim=c(nSim,min(51,K_meta)))
   for (iSim in seq_len(nSim)){
     states = array(0,dim=c(nstates,npairs,tLen/dt+1)) #which state, 46 pairs: ++, +-, -+, --
     # initial states
@@ -316,16 +207,16 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
     }
     # plot(simulated_av_agreement)
     av_acf[iSim,] <- as.numeric(acf(simulated_av_agreement,
-                                    lag.max = 50,plot=FALSE)$acf)
+                                    lag.max = min(50,K_meta),plot=FALSE)$acf)
     ensemble[iSim] <- mean(simulated_av_agreement)
   }
   ggplot(tibble(autocorr=apply(av_acf,2,mean),
-                lag=seq(from=0,to=100,by=dt)),
+                lag=seq(from=0,to=dt*min(50,K_meta-1),by=dt)),
          aes(x=lag,y=autocorr)) + 
     geom_line() + 
     theme_bw() + labs(x="Lag (s)",
                       y="Autocorrelation")
-  ggsave(here::here("plots/average_autocorrelation_100sims_4state_markov_model.eps"),
+  ggsave(here::here(paste0("plots/average_autocorrelation_100sims_4state_markov_model_",job_id,".eps")),
          width=4,height=4)
   
   ggplot(tibble(J=ensemble),aes(J)) + 
@@ -336,10 +227,10 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
     theme_bw() + 
     labs(x="Average alignment in states\nbetween a KT and its neighbours",
          y="Number of simulations")
-  ggsave(here::here("plots/simulated_alignment_vs_observed_alignment.eps"),
+  ggsave(here::here(paste0("plots/simulated_alignment_vs_observed_alignment_",job_id,".eps")),
          width=210,height=140,units="mm")
   
-  pdf(here::here("plots/positions_of_kt_pairs_in_plate.pdf"))
+  pdf(here::here(paste0("plots/positions_of_kt_pairs_in_plate_",job_id,".pdf")))
   plot(positions,xlab='y position (um)',ylab='z position (um)')
   plot(S_nb, positions, add=TRUE, pch=".")
   dev.off()
@@ -347,13 +238,13 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
   a <- acf(av_agreement,lag.max = 50,plot=F)
   lag_x = a$lag
   acf_y = a$acf 
-  pdf(here::here("plots/autocorrelation_of_alignment_data.pdf"))
+  pdf(here::here(paste0("plots/autocorrelation_of_alignment_data_",job_id,".pdf")))
   # acf(av_agreement,lag.max = 50)
   plot(x=lag_x*dt,y=acf_y,type='h',ylab="Autocorrelation",
        xlab="Lag (s)")
   dev.off()
   
-  pdf(here::here("plots/av_agreement_data_time_series.pdf"))
+  pdf(here::here(paste0("plots/av_agreement_data_time_series_",job_id,".pdf")))
   plot(seq(from=0,to=(length(av_agreement)-1)*dt,by=dt),
        av_agreement,xlab="Time (s)",ylab=expression(paste("Alignment ","J"^"t")))
   lines(seq(from=0,to=(length(av_agreement)-1)*dt,by=dt),
@@ -373,5 +264,8 @@ make_local_coordination_agreement_figure <- function(jobset_str,estimate,dt=2.05
   #   out[iSim] <- mean(neighbour_state_agreement)
   # }
   # hist(out)
-  return(list(mean(av_agreement),av_agreement,ensemble))
+
+#  return(list(mean(av_agreement),av_agreement,ensemble))
+sim_ecdf <- stats::ecdf(ensemble)
+return(sim_ecdf(mean(av_agreement)))
 }

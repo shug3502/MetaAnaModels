@@ -24,9 +24,7 @@ get_all_interesting_stats <- function(Data, draws, ana_margin=60,
     summarise(intersister_dist_3d = sqrt(diff(Position_1)^2+diff(Position_2)^2+diff(Position_3)^2)) %>%
     #  group_by(kittracking_file_str,SisterPairID) %>%
     #  summarise(av_intersister_dist_3d = median(intersister_dist_3d,na.rm=TRUE)) %>%
-    mutate(filename=kittracking_file_str) %>%
-    add_treatment_column() %>%
-    filter(treatment %in% treatment_str_vec)
+    mutate(filename=kittracking_file_str)
   
   thunberg <- greta %>% 
     group_by(kittracking_file_str,SisterPairID,Time) %>%
@@ -34,23 +32,19 @@ get_all_interesting_stats <- function(Data, draws, ana_margin=60,
     group_by(kittracking_file_str,SisterPairID) %>%
     mutate(dx=c(NA,diff(centre_normal_position))/dt) %>%
     summarise(centre_normal_speed = sd(dx,na.rm=TRUE)) %>%
-    mutate(filename=kittracking_file_str) %>%
-    add_treatment_column() %>%
-    filter(treatment %in% treatment_str_vec)
+    mutate(filename=kittracking_file_str)
   
   periods_df <- greta %>% 
     group_by(kittracking_file_str,SisterPairID, SisterID)  %>%
     mutate(amplitude = 0.5*(caTools::runmax(Position_1,window_size) - 
                               caTools::runmin(Position_1,window_size))) %>%
-    summarise(period = get_period(Position_1,dt),
+    summarise(#period = get_period(Position_1,dt),
               amplitude = median(amplitude,na.rm=TRUE)
     )
   long_periods_df <- periods_df %>% 
     tidyr::gather(key=measurement,value=val,-kittracking_file_str,-SisterPairID,-SisterID) %>%
-    mutate(filename=kittracking_file_str) %>%
-    add_treatment_column() %>%
-    filter(treatment %in% treatment_str_vec)
-  long_periods_df$measurement <- factor(long_periods_df$measurement,labels = c("Amplitude (um)","Period (s)"))
+    mutate(filename=kittracking_file_str)
+  long_periods_df$measurement <- factor(long_periods_df$measurement,labels = c("Amplitude (um)"))#,"Period (s)"))
   
   
   summarised_draws_df <- draws %>%
@@ -100,17 +94,6 @@ get_all_interesting_stats <- function(Data, draws, ana_margin=60,
     mutate(relative_t_ana = t_ana-t_ana_median) %>%
     dplyr::select(-t_ana,-filename,-cell)
   
-  # #deviation from average position
-  # av_position_df <- simple_positions_by_frame_treatment_df %>%
-  #   filter(Frames_since_start < -10) %>% #omit period close to anaphase onset
-  #   group_by(kittracking_file_str,SisterPairID,SisterID) %>% 
-  #   summarise(av_position = median(Position_1,na.rm=T)) 
-  # deviation_from_av_pos_df <- simple_positions_by_frame_treatment_df %>% 
-  #   filter(Frames_since_start < -10) %>%
-  #   inner_join(av_position_df,by=c("kittracking_file_str","SisterPairID","SisterID")) %>%
-  #   group_by(kittracking_file_str,SisterPairID,SisterID) %>%
-  #   summarise(dap = mean(abs(Position_1 - av_position),na.rm=T))
-  
   all_the_interesting_stats_df <- long_periods_df %>%
     filter(measurement %in% c("Amplitude (um)")) %>% #exclude period, redoing this
     tidyr::spread(measurement,val) %>%
@@ -119,7 +102,7 @@ get_all_interesting_stats <- function(Data, draws, ana_margin=60,
                 summarise(intersister_dist_3d = median(intersister_dist_3d,
                                                        na.rm=TRUE)),
               by=c("SisterPairID","kittracking_file_str")) %>%
-    full_join(thunberg %>% dplyr::select(-filename,-treatment),
+    full_join(thunberg %>% dplyr::select(-filename),
               by=c("SisterPairID","kittracking_file_str")) %>%
     full_join(summarised_draws_df,by=c("kittracking_file_str","SisterPairID")) %>%
     full_join(av_spindle_position_df,by=c("kittracking_file_str","SisterPairID","SisterID")) %>%
@@ -144,7 +127,15 @@ generate_figures_based_on_states_and_switching <- function(estimate,sigma_sim,jo
   }
   Data <- process_jobset(jobset_str,K=Inf,max_missing=0.25) %>%
     filter(!is.na(SisterID))
-  pairIDs <- unique(Data$SisterPairID)
+  has_separated_df <- Data %>%
+    group_by(SisterPairID,Frame) %>%
+    arrange(SisterID,SisterPairID,Frame) %>%
+    summarise(kk_dist=-diff(Position_1)) %>%
+    group_by(SisterPairID) %>%
+    summarise(kk_dist_last = last(kk_dist[!is.na(kk_dist)]),
+              separated = kk_dist_last>2.0) #cut off of 2um
+  pairIDs <- has_separated_df %>% filter(separated) %>% pull(SisterPairID)
+  #pairIDs <- unique(Data$SisterPairID)
   K <- max(Data$Frame)
 
   trail_switch_matrix <- purrr::map(sigma_sim, function(x) apply(x,1,count_trail_switches)) %>% do.call(rbind,.)

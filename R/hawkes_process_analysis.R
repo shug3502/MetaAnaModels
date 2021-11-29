@@ -3,9 +3,19 @@ hawkes_process_analysis <- function(sigma_sim,jobset_str,dt){
 
 Data <- process_jobset(jobset_str,K=Inf,max_missing=0.25)
 K = max(Data$Frame)
-pairIDs <- Data$SisterPairID %>% unique()
+#model was only to fit where sisters had separated by more than 2um
+  has_separated_df <- Data %>%
+    group_by(SisterPairID,Frame) %>%
+    arrange(SisterID,SisterPairID,Frame) %>%
+    summarise(kk_dist=-diff(Position_1)) %>%
+    group_by(SisterPairID) %>%
+    summarise(kk_dist_last = last(kk_dist[!is.na(kk_dist)]),
+              separated = kk_dist_last>2.0) #cut off of 2um
+pairIDs <- has_separated_df %>% filter(separated) %>% pull(SisterPairID)
+#pairIDs <- Data$SisterPairID %>% unique()
 switch_probs_df <- get_switch_probs_df(sigma_sim,pairIDs,K)
 xyt_df <- get_directional_switch_events(switch_probs_df, Data, dt=dt, min_prob=0.5) #only event with a posterior probability of more than 0.5
+if (nrow(xyt_df)==0) return(NULL)
 
 pairIDs <- xyt_df[["SisterPairID"]] %>% unique() %>% sort()
 data <- list(Space=xyt_df[,c("Position_2","Position_3")],
@@ -46,7 +56,8 @@ plot_hawkes_process_analysis <- function(xyt_df,fit,jobset_str){
 job_id = stringr::str_split(jobset_str,"kittracking")[[1]][2]
 edited_job_id = job_id %>% stringr::str_replace_all("\\.","")
 out <- rstan::extract(fit)
-llmask = colMeans(out$ll) > quantile(colMeans(out$ll),1-mean(out$a))
+#llmask = colMeans(out$ll) > quantile(colMeans(out$ll),1-mean(out$a))
+llmask = colMeans(out$ll) > quantile(colMeans(out$ll),max(1-median(out$a),0))
 llshapes = rep(22,length(llmask))
 llshapes[llmask == T] = 20
 llalphas = rep(.25,length(llmask))

@@ -32,24 +32,32 @@ source(here::here('R/extract_hidden_states.R'))
 ##############################
 #options etc
 dt=2.05
+load_draws <- TRUE
 fits_folder_str <- "fits"
 identifier = "jonathanharrison_MetaAnaModels_2s_v411" #args[1]
 path_to_folder = "data" #args[2]
 
 jobset_str_list <- list.files(path = path_to_folder,pattern="\\.csv$",
                               full.names=TRUE,recursive=TRUE)
-K_list <- rep(Inf,length(jobset_str_list))
 stopifnot(length(jobset_str_list)>0)
-
-draws <- summarise_batch_anaphase_reversals(identifier,jobset_str_list,dt=dt,
+#jobset_str_list <- jobset_str_list[1:15]
+if (load_draws){
+  draws <- readRDS('fits/median_anaphase_reversals_parameter_estimates_jonathanharrison_MetaAnaModels_2s_v411.rds')
+} else {
+  draws <- summarise_batch_anaphase_reversals(identifier,jobset_str_list,dt=dt,
                                      fits_folder_str = fits_folder_str,
                                      max_missing = 0.25,tol = 1.05,
                                      run_analysis = FALSE,
                                      use_parallel = FALSE)
-#############################
+}
 
 #for Figure 1: tracking
-make_tracking_figure(jobset_str_list)
+make_tracking_figure(jobset_str_list) #uses all cells as does not rely on output of MCMC
+############################
+
+jobset_str_list <- draws %>% filter(converged) %>% pull(filename) %>% unique() #only use cells where MCMC has converged
+draws <- draws %>% filter(converged)
+#############################
 
 #############################
 #Figures 2 to 4 generated separately or to be added later
@@ -85,8 +93,12 @@ make_anaphase_times_and_speed_figure(jobset_str_list,draws,min_num_sisters=10,nf
 # 
 # #############################
  #Figure 11: coordination of anaphase onset
-make_coordination_of_anaphase_onset_figure(identifier,jobset_str_list,dt=dt)
+q_at_ana <- make_coordination_of_anaphase_onset_figure(identifier,jobset_str_list,dt=dt)
 
+q_local <- make_local_coordination_agreement_figure(jobset_str_list,identifier,dt=2.05,
+                                                     nStates=6,niter=200)
+
+local_coordination <- rep(NA,length(jobset_str_list))
 for (i in seq_along(jobset_str_list)){
   #extract hidden states
 #  jobset_str <- here::here("data/OS_LLSM_200818_MC191_Untreated_2.04933s_per_frame//kittracking001-kitjobset_200825_DonaldDuck_auto_v125-OS_LLSM_200818_MC191_Untreated_capture10_flowdec_deconvolved.ome.csv")
@@ -112,11 +124,11 @@ for (i in seq_along(jobset_str_list)){
     hawkes_process_analysis(sigma_sim,jobset_str_list[i],dt)
     
     #############################
-    #Figure 10: local coordination and agreement
-    #TODO: similarly
-    make_local_coordination_agreement_figure(jobset_str_list[i],estimate,dt=dt,
-                                             nStates=6,niter=200)
-    
+#    #Figure 10: local coordination and agreement
+#    #TODO: similarly
+#    local_coordination[i] <- make_local_coordination_agreement_figure(jobset_str_list[i],estimate,edited_job_id,dt=dt,
+#                                             nStates=6,niter=200)    
+    success=1
   } else {
     cat('Files from sampling do not exist. Skipping this cell.\n')
     success=0

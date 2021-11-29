@@ -22,6 +22,7 @@ shared_plt <- draws %>%
   filter(param %in% c("p_icoh","p_coh")) %>%
   tidyr::spread(param,theta) %>%
   rename(p_icoh=p_coh,p_coh=p_icoh,p_AR=p_reversal,p_RA=p_revtoana) %>%
+  mutate(p_AR = 1-p_AR, p_RA = 1-p_RA) %>%
   tidyr::gather("param","theta",p_icoh,p_coh,p_AR,p_RA) %>%
   group_by(filename,cell,param) %>%
   summarise(theta=median(theta)) %>%
@@ -64,6 +65,16 @@ h2 <- h1 +
 
 individual_plt / shared_plt / h2 + plot_layout(heights=c(1,1,1))
 ggsave(here::here("plots/comp_biol_fig5.eps"),width=210,height=297,units="mm")
+
+h3 <- ggplot(a %>% filter(r=="All"),aes(param,within_cell_spread)) +
+  geom_violin(draw_quantiles = 0.5) +
+  geom_jitter() +
+  facet_wrap(.~param,labeller=label_parsed,scales="free") +
+  theme_bw() +
+  geom_point(data=b %>% filter(r=="All"),
+             aes(x=param, y = between_cell_spread),color="red",size=4) +
+  labs(x="Parameter",y="Standard deviation of parameter")
+ggsave(here::here("plots/comp_biol_fig_heterogeneity.eps"),width=210,height=100,units="mm")
 
 #Assuming a normal distribution for within cell spread, evaluate probability that between cell spread comes from this distribution
 a %>% ungroup() %>% filter(abs(within_cell_spread)>0) %>% 
