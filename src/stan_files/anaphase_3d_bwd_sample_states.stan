@@ -158,7 +158,7 @@ parameters {
   real<lower=0> L;
 }
 transformed parameters{
-  real theta[8]; //for metaphase ODE model
+  real theta[10]; //for metaphase ODE model
   matrix[T, nStates] eta;
   matrix[T, nStates] xi;
   vector[T] f;
@@ -174,6 +174,8 @@ transformed parameters{
   theta[6]=p_icoh;
   theta[7]=p_coh;
   theta[8]=L;
+  theta[9]=v_ana;
+  theta[10]=t_ana;
 for (t in 1:T0) {
   for (j in 1:5) {
     eta[t,j] = 0;
@@ -241,7 +243,7 @@ model {
   p_coh ~ beta(2.5,1);
   v_ana ~ normal(0.03,0.1) T[0,];
   L ~ normal(0.790,0.119) T[0,];
-  t_ana ~ normal(t_ana_input,3*dt) T[0,T*dt]; 
+  t_ana ~ normal(t_ana_input,14) T[0,T*dt]; 
   
   // likelihood is really easy here!
   target += sum(log(f));
@@ -266,15 +268,7 @@ generated quantities {
   for (t in 1:(T1-T0-1)){
     frame = T1+1-t; //from T1 to T1+1-(T1-T0-1)=T0+2
     P_col = construct_transition_column(p_icoh,p_coh,p_ana[frame],sigma_sim[frame]);
-/*
-print("frame ",frame);
-print("P_col ",P_col);
-print("xi ",xi[frame-1]');
-print(999);
-*/
     conditional_state_probs = log(P_col) + log(xi[frame-1]');
-//print("csp ",conditional_state_probs);
-//print("ecsp ",exp(conditional_state_probs));
   if (is_inf(sum(conditional_state_probs))){
     sigma_sim[frame-1] = categorical_rng(exp(conditional_state_probs)/sum(exp(conditional_state_probs)));
   } else {
