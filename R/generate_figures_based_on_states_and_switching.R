@@ -135,7 +135,7 @@ generate_figures_based_on_states_and_switching <- function(estimate,sigma_sim,jo
     summarise(kk_dist_last = last(kk_dist[!is.na(kk_dist)]),
               separated = kk_dist_last>2.0) #cut off of 2um
   pairIDs <- has_separated_df %>% filter(separated) %>% pull(SisterPairID)
-  #pairIDs <- unique(Data$SisterPairID)
+  if (length(pairIDs) != nrow(sigma_sim[[1]])) { pairIDs <- unique(Data$SisterPairID)} #revert to using all pairs if fitted previously with everything
   K <- max(Data$Frame)
 
   trail_switch_matrix <- purrr::map(sigma_sim, function(x) apply(x,1,count_trail_switches)) %>% do.call(rbind,.)
@@ -151,8 +151,8 @@ generate_figures_based_on_states_and_switching <- function(estimate,sigma_sim,jo
                                   lead=apply(lead_switch_matrix,2,mean),
                                   joint=apply(joint_switch_matrix,2,mean),
                                   total=apply(total_switch_matrix,2,mean),
-                                  proportion_LIDS=apply(proportion_LIDS,2,mean),
-                                  proportion_TIDS=apply(proportion_TIDS,2,mean)
+                                  proportion_LIDS=apply(proportion_LIDS,2,function(x) mean(x,na.rm=T)),
+                                  proportion_TIDS=apply(proportion_TIDS,2,function(x) mean(x,na.rm=T))
                                   )
   LIDS_TIDS_ratio_plt <- switching_df_for_cell %>% 
     rename(Lead=proportion_LIDS,Trail=proportion_TIDS) %>%
@@ -366,6 +366,6 @@ ggsave(here::here(paste0("plots/reversals_fig_",identifier,".eps")),
 cat("skipping reversals plots - check reversals for this cell")
 }
 
-return(1) #success
+return(switching_df_for_cell %>% mutate(filename=jobset_str)) #success
 }
 

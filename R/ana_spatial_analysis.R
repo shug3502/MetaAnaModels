@@ -1,5 +1,5 @@
 ana_spatial_analysis <- function(positions_at_anaphase_onset_df,identifier,nRepeats=1000){
-
+set.seed(123)
 nPairs <- nrow(positions_at_anaphase_onset_df)
 #from the data
 S <- matrix(rep(NA,nPairs*(nPairs-1)),ncol=2)
@@ -13,8 +13,8 @@ for (i in 1:nPairs){
   }
 }
 
-num_bottom_left_resample <- purrr::map_int(1:nRepeats,function(x) resample_distances(positions_at_anaphase_onset_df) %>% get_number_in_bottom_left(.,a=4,b=2))
-num_bottom_left_data <- get_number_in_bottom_left(S,a=4,b=2)
+num_bottom_left_resample <- purrr::map_int(1:nRepeats,function(x) resample_distances(positions_at_anaphase_onset_df) %>% get_number_in_bottom_left(.,a=2,b=2))
+num_bottom_left_data <- get_number_in_bottom_left(S,a=2,b=2)
 sim_ecdf <- stats::ecdf(num_bottom_left_resample)
 
 p1 <- ggplot(data=tibble(tt=S[,1],dd=S[,2]),
@@ -36,7 +36,7 @@ p1 | q1
 ggsave(here::here(paste0("plots/dist_vs_time_difference_of_pairs_at_anaphase_",identifier,".eps")))
 
 pdf(here::here(paste0("plots/ecdf_",identifier,".pdf")))
-plot(sim_ecdf,ylab="eCDF",xlab="Number of points",main="")
+plot(sim_ecdf,ylab="eCDF",xlab="Number of points",main="",verticals=TRUE)
 abline(v=num_bottom_left_data,col = "gray60",lty="dashed")
 dev.off()
 

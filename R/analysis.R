@@ -99,6 +99,7 @@ q_local <- make_local_coordination_agreement_figure(jobset_str_list,identifier,d
                                                      nStates=6,niter=200)
 
 local_coordination <- rep(NA,length(jobset_str_list))
+lids_lst <- list()
 for (i in seq_along(jobset_str_list)){
   #extract hidden states
 #  jobset_str <- here::here("data/OS_LLSM_200818_MC191_Untreated_2.04933s_per_frame//kittracking001-kitjobset_200825_DonaldDuck_auto_v125-OS_LLSM_200818_MC191_Untreated_capture10_flowdec_deconvolved.ome.csv")
@@ -115,7 +116,7 @@ for (i in seq_along(jobset_str_list)){
     #############################
     #Figure 8: Directional switching
     #TODO: sort this out by looping over jobs or changin how it works
-    generate_figures_based_on_states_and_switching(estimate,sigma_sim,jobset_str_list[i],
+    lids_lst[[i]] <- generate_figures_based_on_states_and_switching(estimate,sigma_sim,jobset_str_list[i],
                                                    paste0(identifier,"cell",i),dt=dt)
     
     #############################

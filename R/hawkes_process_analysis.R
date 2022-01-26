@@ -60,16 +60,17 @@ out <- rstan::extract(fit)
 llmask = colMeans(out$ll) > quantile(colMeans(out$ll),max(1-median(out$a),0))
 llshapes = rep(22,length(llmask))
 llshapes[llmask == T] = 20
-llalphas = rep(.25,length(llmask))
-llalphas[llmask == T] = .6
+#llalphas = rep(.25,length(llmask))
+#llalphas[llmask == T] = .6
 df = data.frame(x=xyt_df$Position_2,y=xyt_df$Position_3,
-                ll=factor(llmask,c("Background","Excitatory")),
+#                ll=factor(llmask,c("Background","Excitatory")),
+		ll=factor(ifelse(llmask,"Background","Excitatory"),levels=c("Background","Excitatory")),
 		time=cut(xyt_df[["Time"]],seq(from=0,to=4*150,by=150)))
 g = ggplot(data=df,aes(x,y))
-g = g + geom_point(aes(shape=llshapes,alpha=llalphas),size=2)
+g = g + geom_point(aes(shape=llshapes),size=2)
 g = g + facet_wrap(.~time,labeller="label_both") 
 g = g + scale_shape_identity()
-g = g + scale_alpha_identity()
+#g = g + scale_alpha_identity() #cairo not working on linux
 g = g + theme_bw() + labs(x="y Position (um)",y="z Position (um)")
 g
 ggsave(here::here(paste0("plots/switching_background_vs_excitory_from_hawkes_process_",edited_job_id,".eps")),width=4,height=4)

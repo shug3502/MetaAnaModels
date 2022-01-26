@@ -26,7 +26,7 @@ p1 <- ggplot(data=tibble(dist=empirical_quantile_of_obs_vs_sim),
        aes(dist)) + 
   geom_histogram() +
   theme_bw() +
-  labs(x="Quantile in comparison between data and simulations",
+  labs(x="Percentile in comparison\nbetween data and simulations",
        y="Number of cells")
 #p2 <- ggplot(data=tibble(dist=empirical_quantile_of_obs_vs_sim,nPairs=nPairs_at_ana_vec),
 #	     aes(nPairs,dist)) + 
@@ -37,10 +37,22 @@ p1
 ggsave(here::here("plots/av_distance_between_pairs_at_anaphase_onset_quantile_histogram.eps"),width=6,height=4)
 p2 <- ggplot(data=tibble(quantile=empirical_quantile_of_obs_vs_sim,
 			 nPts=nPts_at_ana),
-	     aes(nPts,quantile)) + 
+	     aes(nPts,quantile)) +
+	labs(x="Number of tracked pairs at anaphase onset",
+	     y="Percentile in comparison between data and simulations") +  
+	geom_vline(xintercept=30,linetype="dashed",color="grey") +
 	geom_point() + theme_bw()
 p2
 ggsave(here::here("plots/number_of_points_in_square_vs_quantile.eps"),width=6,height=4)
+p3 <- ggplot(data=tibble(quantile=empirical_quantile_of_obs_vs_sim,
+                         nPts=nPts_at_ana) %>% filter(nPts>30),
+       aes(quantile)) +
+  geom_histogram() +
+  theme_bw() +
+  labs(x="Percentile in comparison\nbetween data and simulations",
+       y="Number of cells")
+p2 / p3
+ggsave(here::here("plots/number_of_points_in_square_vs_quantile_plus_restricted_to_more_than_30_pairs.eps"),width=6,height=4)
 
 #plt <- ggplot(pdist_t_ana_df,aes(dist,t_ana_diff)) + 
 #geom_point(size=0.5) + 

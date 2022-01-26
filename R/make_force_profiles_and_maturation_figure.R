@@ -91,36 +91,52 @@ forces_df <- all_states_df %>%
                tidyr::spread(key=param,value=theta) %>% 
                add_kittracking_column(),by=c("kittracking_file_str","SisterPairID")) %>% 
   group_by(iter,Frames_since_start,kittracking_file_str,SisterPairID) %>%
-  summarise(spring = first(kappa)*(-diff(Position_1)-first(L))*(state<5),
-            PEF = first(alpha)*max(Position_1)*(state<5),
-            `K-fibre (Meta)` = case_when(state==1 ~ first(v_plus),
-                                         state==2 ~ first(v_plus),
-                                         state==3 ~ -first(v_minus),
-                                         state==4 ~ -first(v_minus),
-                                         state==5 ~ 0,
-                                         state==6 ~ 0,
-                                         TRUE ~ NA_real_),
-            `K-fibre (Ana)` = case_when(state==1 ~ 0,
-                                        state==2 ~ 0,
-                                        state==3 ~ 0,
-                                        state==4 ~ 0,
+  summarise(spring = if_else(state<5,first(kappa)*(-diff(Position_1)-first(L)),NA_real_),
+            PEF = if_else(state<5,first(alpha)*max(Position_1),NA_real_),
+#            `K-fibre (Meta)` = case_when(state==1 ~ first(v_plus),
+#                                         state==2 ~ first(v_plus),
+#                                         state==3 ~ -first(v_minus),
+#                                         state==4 ~ -first(v_minus),
+#                                         state==5 ~ NA_real_,
+#                                         state==6 ~ NA_real_,
+#                                         TRUE ~ NA_real_),
+#            `K-fibre (Ana)` = case_when(state==1 ~ NA_real_,
+	     `v_A` = case_when(state==1 ~ NA_real_,
+                                        state==2 ~ NA_real_,
+                                        state==3 ~ NA_real_,
+                                        state==4 ~ NA_real_,
                                         state==5 ~ first(v_ana),
-                                        state==6 ~ 0,
-                                        TRUE ~ NA_real_))
+                                        state==6 ~ NA_real_,
+                                        TRUE ~ NA_real_),
+	    `v_-` = case_when(state==1 ~ NA_real_,
+				state==2 ~ NA_real_,
+				state==3 ~ -first(v_minus),
+				state==4 ~ -first(v_minus),
+				state==5 ~ NA_real_, 
+				state==6 ~ NA_real_,
+				TRUE ~ NA_real_),
+            `v_+` = case_when(state==1 ~ first(v_plus), 
+                                state==2 ~ first(v_plus), 
+                                state==3 ~ NA_real_,
+                                state==4 ~ NA_real_,
+                                state==5 ~ NA_real_, 
+                                state==6 ~ NA_real_,
+                                TRUE ~ NA_real_))
+saveRDS(forces_df,'fits/forces_df.rds')
 
 plt1 <- forces_df %>%
   tidyr::gather(key=force,value=value,-kittracking_file_str,-SisterPairID,-Frames_since_start, -iter) %>%
   group_by(Frames_since_start,kittracking_file_str,SisterPairID,force) %>%
   summarise(value=mean(value,na.rm=T)) %>%
   group_by(force,Frames_since_start) %>%
-  summarise(med=median(value,na.rm=T),
+  summarise(med=if_else(sum(!is.nan(value))>100, median(value,na.rm=T), NA_real_), 
             ub=quantile(value,0.9,na.rm=T),
             lb=quantile(value,0.1,na.rm=T)) %>%
   ungroup() %>%
   filter(Frames_since_start<30) %>% filter(Frames_since_start > -60) %>%
   ggplot(aes(x=Frames_since_start*dt,y=med,color=factor(force))) + 
   geom_line() +
-  scale_color_manual(values=RColorBrewer::brewer.pal(n=4,"PiYG")) +
+  scale_color_manual(values=c("black","grey",RColorBrewer::brewer.pal(n=4,"PiYG"))) +
   theme_bw() +
   theme(legend.position = "top") +
   guides(color=guide_legend(ncol=2)) +
@@ -128,7 +144,8 @@ plt1 <- forces_df %>%
 plt1
 ggsave(here::here("plots/force_profiles_around_anaphase.eps"), width=4.5,height=4.5)
 
-plt2 <- forces_df %>% mutate(is_ana=factor(if_else(`K-fibre (Ana)`>0,"Ana","Meta"),levels=c("Meta","Ana"))) %>% 
+plt2 <- forces_df %>% #mutate(is_ana=factor(if_else(!is.na(`v_A`),"Ana","Meta"),levels=c("Meta","Ana"))) %>% 
+  mutate(is_ana=factor(case_when(!is.na(`v_A`) ~ "A", !is.na(`v_-`) ~ "-", !is.na(`v_+`) ~ '+', TRUE ~ NA_character_ ),levels=c("+","-","A"))) %>%
   tidyr::gather(key=force,value=value,
                 -kittracking_file_str,-SisterPairID,
                 -Frames_since_start, -iter, -is_ana) %>% 
@@ -141,9 +158,31 @@ plt2 <- forces_df %>% mutate(is_ana=factor(if_else(`K-fibre (Ana)`>0,"Ana","Meta
   theme_bw() +
   theme(legend.position = "top") +
   guides(fill=guide_legend(ncol=2)) +
-  scale_fill_manual(values=RColorBrewer::brewer.pal(n=4,"PiYG"))
+  scale_fill_manual(values=c("black","grey",RColorBrewer::brewer.pal(n=4,"PiYG")))
 
-plt1 | plt2
+#plt1 | plt2
+
+plt3 <- forces_df %>% mutate(is_ana=factor(case_when(!is.na(`v_A`) ~ "A", 
+						     !is.na(`v_-`) ~ "-", 
+						     !is.na(`v_+`) ~ '+', 
+						     TRUE ~ NA_character_ ),levels=c("+","-","A"))) %>%
+  tidyr::gather(key=force,value=value,
+                -kittracking_file_str,-SisterPairID,
+                -Frames_since_start, -iter, -is_ana) %>%
+  group_by(force,is_ana) %>%
+  summarise(val = mean(value,na.rm=T)) %>%
+  drop_na() %>% 
+  tidyr::spread(force,val) %>% 
+    mutate(net=case_when(is_ana=="A" ~ v_A, 
+                         is_ana=="-" ~ `v_-` - PEF - spring, 
+                         is_ana=="+" ~ `v_+` + PEF + spring)) %>% 
+    ggplot(aes(is_ana,net)) +
+    geom_bar(stat="identity") +
+    labs(x=" ",y="Net Force (um/s)") +
+    theme_bw() +
+    theme(legend.position = "top")
+
+plt1 | {plt2 / plt3}
 ggsave(here::here("plots/force_profiles_around_anaphase_and_barchart.eps"), width=4.5,height=4.5)
 
 #######
