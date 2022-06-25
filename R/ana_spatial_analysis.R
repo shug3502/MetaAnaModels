@@ -36,7 +36,7 @@ p1 | q1
 ggsave(here::here(paste0("plots/dist_vs_time_difference_of_pairs_at_anaphase_",identifier,".eps")))
 
 pdf(here::here(paste0("plots/ecdf_",identifier,".pdf")))
-plot(sim_ecdf,ylab="eCDF",xlab="Number of points",main="")
+plot(sim_ecdf,ylab="eCDF",xlab="Number of points",main="",verticals=TRUE)
 abline(v=num_bottom_left_data,col = "gray60",lty="dashed")
 dev.off()
 

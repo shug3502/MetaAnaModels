@@ -53,7 +53,8 @@ count_joint_switches <- function(ind) count_num_switch_patterns(ind,pattern_seq=
   count_num_switch_patterns(ind,pattern_seq=c(3,2),is_joint=TRUE)
 
 proportion_lids_estimator <- function(estimate){
-  draws <- rstan::extract(estimate,pars="y_tilde",permuted=TRUE)$y_tilde 
+#  draws <- rstan::extract(estimate,pars="y_tilde",permuted=TRUE)$y_tilde 
+  draws <- rstan::extract(estimate,pars="sigma_sim",permuted=TRUE)$sigma_sim
   qq <- tibble(lead=apply(draws,1,count_lead_switches),
                trail=apply(draws,1,count_trail_switches),
                joint=apply(draws,1,count_joint_switches))
@@ -75,7 +76,8 @@ ggplot(df %>% tidyr::gather(state,prob,-t) %>% mutate(state=factor(state,levels=
 }
 
 get_switching_df <- function(estimate,K,dt,x){
-  draws <- rstan::extract(estimate,pars="y_tilde",permuted=TRUE)$y_tilde  
+#  draws <- rstan::extract(estimate,pars="y_tilde",permuted=TRUE)$y_tilde  
+draws <- rstan::extract(estimate,pars="sigma_sim",permuted=TRUE)$sigma_sim
 lead_switches <- apply(draws,1,prob_lead_switch) %>%
   apply(.,1,mean)
 trail_switches <- apply(draws,1,prob_trail_switch) %>%
@@ -91,22 +93,23 @@ df <- tibble(lead=lead_switches,trail=trail_switches,joint=joint_switches,
 return(df)
 }
 
-plot_switching_output <- function(estimate,K,dt,x){
+plot_switching_output <- function(estimate,K,dt,x,nStates=4,possible_states=c("++","+-","-+","--")){
   df <- get_switching_df(estimate,K,dt,x)
-  draws <- rstan::extract(estimate,pars="y_tilde",permuted=TRUE)$y_tilde  
+#  draws <- rstan::extract(estimate,pars="y_tilde",permuted=TRUE)$y_tilde  
+draws <- rstan::extract(estimate,pars="sigma_sim",permuted=TRUE)$sigma_sim
 #visualise
   gg1 <- ggplot(df %>% mutate(total=lead+trail+joint) %>%
-                  tidyr::gather(switch,prob,-t,-sis1,-sis2, -proportion_lids),aes(t,prob,color=factor(switch))) +
+                  tidyr::gather(switch,prob,-t,-sis1,-sis2, -proportion_lids,-proportion_tids),aes(t,prob,color=factor(switch))) +
   geom_line() + theme_bw() +
   theme(legend.position="top") + 
   labs(x="Time (s)",y="Probability\n of switch",title="Probability of LIDS and TIDS switch events",color="Switch type")
-gg2 <- ggplot(df %>% tidyr::gather(SisterID,Position,-t,-lead,-trail,-joint,-proportion_lids),
+gg2 <- ggplot(df %>% tidyr::gather(SisterID,Position,-t,-lead,-trail,-joint,-proportion_lids,-proportion_tids,-total),
               aes(t,Position,color=factor(SisterID))) + geom_line() +
   theme_bw() +
   theme(legend.position="none") + 
   labs(x="Time (s)",y="Position")
 
-gg3 <- plot_hidden_state_draws(draws,dt=dt) + theme_bw() + 
+gg3 <- plot_hidden_state_draws(draws,dt=dt,nStates=nStates,possible_states=possible_states) + theme_bw() + 
   labs(x="Time (s)",y="Probability",title="Sampled states",fill="")
 #gg4 <- plot_hidden_states(estimate,dt=dt)
 print(gg1 + gg2 + gg3 + plot_layout(ncol=1))

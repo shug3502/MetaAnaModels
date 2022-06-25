@@ -127,6 +127,6 @@ tracks_within_metaphase_plate_plt <- Data_2s %>%
 {num_kts_plt | num_pairs_plt | plate_position_plt | position_time_plt} /
   tracks_within_metaphase_plate_plt + plot_layout(heights=c(1,2))
 ggsave(here::here("plots/tracking_fig_panel.eps"),
-       width=210,height=180,units="mm")
+       width=210,height=180,units="mm",device=cairo_ps)
 }
 ################
