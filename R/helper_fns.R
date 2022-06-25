@@ -53,9 +53,11 @@ exclude_sisters_that_cross <- function(Data){
   dplyr::select(-crossed)
 }
 
-process_jobset <- function(jobset_str,K=Inf,max_missing=0,start_from=0,plot_opt=0){
+process_jobset <- function(jobset_str,K=Inf,max_missing=0,start_from=0,plot_opt=0,
+			   interpolation = TRUE){
   #this function makes it easier to read tracking output of tracked kinetochores
 stopifnot(!is.na(K))
+if (interpolation){ #default to interpolating missing data linearly
 Data <- read.csv(jobset_str,header=TRUE) %>%
   dplyr::group_by(SisterPairID,SisterID) %>%
   dplyr::mutate(Position_1=interpolate_missing_data(Position_1,Time)) %>%
@@ -65,6 +67,14 @@ Data <- read.csv(jobset_str,header=TRUE) %>%
     extract_long_tracks(K,start_from,max_missing) %>%
     reorder_sisters() %>%
     exclude_sisters_that_cross()
+} else {
+Data <- read.csv(jobset_str,header=TRUE) %>% 
+  as_tibble() %>%
+  dplyr::ungroup() %>%
+  extract_long_tracks(K,start_from,max_missing) %>%
+  reorder_sisters() %>%
+  exclude_sisters_that_cross()
+}
   if (plot_opt){
     g <- ggplot(Data, aes(x=Time, y=Position_1,color=factor(SisterID))) +
       geom_line() +
